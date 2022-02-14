@@ -26,6 +26,7 @@ package org.apache.hudi.exception;
 public class HoodieDependentSystemUnavailableException extends HoodieException {
 
   public static final String HBASE = "HBASE";
+  public static final String RONDB = "RONDB";
 
   public HoodieDependentSystemUnavailableException(String system, String connectURL) {
     super(getLogMessage(system, connectURL));
