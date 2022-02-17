@@ -218,6 +218,11 @@
       <version>${zk-curator.version}</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>com.mysql.ndb</groupId>
+      <artifactId>clusterj-rondb</artifactId>
+      <version>21.04.2</version>
+    </dependency>
 
   </dependencies>
 

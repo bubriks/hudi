@@ -65,6 +65,11 @@
       <artifactId>mysql-connector-java</artifactId>
       <version>8.0.28</version>
     </dependency>
+    <dependency>
+      <groupId>com.mysql.ndb</groupId>
+      <artifactId>clusterj-rondb</artifactId>
+      <version>21.04.2</version>
+    </dependency>
 
     <!-- Parquet -->
     <dependency>
