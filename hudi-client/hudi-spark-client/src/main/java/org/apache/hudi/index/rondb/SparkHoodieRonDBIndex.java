@@ -66,7 +66,7 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
   private static Connection rondbConnection = null;
   private static transient Thread shutdownThread;
 
-  private static final String commitTimestampFormat = "yyyyMMddHHmmss";
+  private final String commitTimestampFormat = "yyyyMMddHHmmss";
 
   private final String recordKey = "record_key";
   private final String commitTimestamp = "commit_ts";
