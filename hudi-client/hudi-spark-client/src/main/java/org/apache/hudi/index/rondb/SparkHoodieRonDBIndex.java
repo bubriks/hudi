@@ -18,9 +18,11 @@
 
 package org.apache.hudi.index.rondb;
 
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hudi.client.WriteStatus;
 import org.apache.hudi.client.utils.SparkMemoryUtils;
 import org.apache.hudi.common.engine.HoodieEngineContext;
+import org.apache.hudi.common.model.EmptyHoodieRecordPayload;
 import org.apache.hudi.common.model.HoodieRecordPayload;
 import org.apache.hudi.common.model.HoodieRecord;
 import org.apache.hudi.common.model.HoodieKey;
@@ -28,6 +30,7 @@ import org.apache.hudi.common.model.HoodieRecordLocation;
 import org.apache.hudi.common.table.HoodieTableMetaClient;
 import org.apache.hudi.common.table.timeline.HoodieTimeline;
 import org.apache.hudi.common.util.Option;
+import org.apache.hudi.common.util.RateLimiter;
 import org.apache.hudi.config.HoodieWriteConfig;
 import org.apache.hudi.exception.HoodieDependentSystemUnavailableException;
 import org.apache.hudi.index.SparkHoodieIndex;
@@ -37,6 +40,7 @@ import org.apache.log4j.Logger;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.Function2;
 import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormat;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -44,10 +48,14 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.ResultSet;
+import java.sql.Timestamp;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Iterator;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Hoodie Index implementation backed by RonDB.
@@ -62,6 +70,8 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
   private final String commitTimestamp = "commit_ts";
   private final String partition = "partition_path";
   private final String fileName = "file_name";
+
+  private final String timeFormat = "yyyyMMddHHmmss";
 
   private final String tableName;
 
@@ -93,10 +103,10 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
     stmt.execute(query);
 
     query = "CREATE TABLE IF NOT EXISTS " + tableName + " (\n"
-            + "  `" + recordKey + "` varchar(50)  NOT NULL, \n"
-            + "  `" + commitTimestamp + "` varchar(14)  NOT NULL, \n"
-            + "  `" + partition + "` varchar(50) NOT NULL, \n"
-            + "  `" + fileName + "` varchar(50) NOT NULL, \n"
+            + "  `" + recordKey + "` VARBINARY(255)  NOT NULL, \n"
+            + "  `" + commitTimestamp + "` TIMESTAMP NOT NULL, \n"
+            + "  `" + partition + "` VARCHAR(255) NOT NULL, \n"
+            + "  `" + fileName + "` VARCHAR(255) NOT NULL, \n"
             + "   PRIMARY KEY (" + recordKey + ") \n"
             + ")";
     stmt.execute(query);
@@ -110,7 +120,7 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
       return DriverManager.getConnection(config.getRonDBUrl(), config.getRonDBUsername(), config.getRonDBPassword());
     } catch (SQLException e) {
       throw new HoodieDependentSystemUnavailableException(HoodieDependentSystemUnavailableException.RONDB,
-          config.getRonDBUrl());
+              config.getRonDBUrl());
     }
   }
 
@@ -135,20 +145,20 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
     String sql = "SELECT * FROM " + tableName + " WHERE " + recordKey + " = ?";
 
     PreparedStatement p = rondbConnection.prepareStatement(sql);
-    p.setString(1, key);
+    p.setBytes(1, Bytes.toBytes(key));
     return p;
   }
 
   private PreparedStatement generateUpsertStatement(String key, String partitionPath, String fileId, String commitTs)
-          throws SQLException {
+          throws SQLException, ParseException {
     String sql = "REPLACE INTO " + tableName + " (" + recordKey + ", " + partition + ", " + fileName + ", " + commitTimestamp + ")"
             + "VALUES (?, ?, ?, ?)";
 
     PreparedStatement p = rondbConnection.prepareStatement(sql);
-    p.setString(1, key);
+    p.setBytes(1, Bytes.toBytes(key));
     p.setString(2, partitionPath);
     p.setString(3, fileId);
-    p.setString(4, commitTs);
+    p.setTimestamp(4, new Timestamp(new SimpleDateFormat(timeFormat).parse(commitTs).getTime()));
     return p;
   }
 
@@ -157,7 +167,7 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
     String sql = "DELETE FROM " + tableName + " WHERE " + recordKey + " = ?";
 
     PreparedStatement p = rondbConnection.prepareStatement(sql);
-    p.setString(1, key);
+    p.setBytes(1, Bytes.toBytes(key));
     return p;
   }
 
@@ -189,8 +199,13 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
   private Function2<Integer, Iterator<HoodieRecord<T>>, Iterator<HoodieRecord<T>>> locationTagFunction(
           HoodieTableMetaClient metaClient) {
 
+    // `multiGetBatchSize` is intended to be a batch per 100ms. To create a rate limiter that measures
+    // operations per second, we need to multiply `multiGetBatchSize` by 10.
+    Integer multiGetBatchSize = config.getRonDBIndexGetBatchSize();
     return (partitionNum, hoodieRecordIterator) -> {
 
+      boolean updatePartitionPath = config.getRonDBIndexUpdatePartitionPath();
+      RateLimiter limiter = RateLimiter.create(multiGetBatchSize * 10, TimeUnit.SECONDS);
       // Grab the global RonDB connection
       synchronized (SparkHoodieRonDBIndex.class) {
         if (rondbConnection == null || rondbConnection.isClosed()) {
@@ -200,7 +215,6 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
       }
 
       List<HoodieRecord<T>> taggedRecords = new ArrayList<>();
-
       List<PreparedStatement> statements = new ArrayList<>();
       List<HoodieRecord> currentBatchOfRecords = new LinkedList<>();
       // Do the tagging.
@@ -209,14 +223,12 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
         statements.add(generateGetStatement(rec.getRecordKey()));
         currentBatchOfRecords.add(rec);
         // iterator till we reach batch size
-        if (hoodieRecordIterator.hasNext()) {
+        if (hoodieRecordIterator.hasNext() && statements.size() < multiGetBatchSize) {
           continue;
         }
-
         // get results for batch from RonDB
-        List<ResultSet> results = executeQuery(statements);
-
-        // clear statements
+        List<ResultSet> results = executeQuery(statements, limiter);
+        // clear statements to be GC'd
         statements.clear();
 
         for (ResultSet result : results) {
@@ -226,47 +238,68 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
             taggedRecords.add(currentRecord);
             continue;
           }
-
           // get info
-          String keyFromResult = result.getString(recordKey);
-          String commitTs = result.getString(commitTimestamp);
+          String keyFromResult = Bytes.toString(result.getBytes(recordKey));
+          String commitTs = DateTimeFormat.forPattern(timeFormat).print(result.getTimestamp(commitTimestamp).getTime());
           String fileId = result.getString(fileName);
           String partitionPath = result.getString(partition);
-
           if (!checkIfValidCommit(metaClient, commitTs)) {
             // if commit is invalid, treat this as a new taggedRecord
             taggedRecords.add(currentRecord);
             continue;
           }
 
-          // tag record
-          currentRecord = new HoodieRecord(new HoodieKey(currentRecord.getRecordKey(), partitionPath),
-                  currentRecord.getData());
-          currentRecord.unseal();
-          currentRecord.setCurrentLocation(new HoodieRecordLocation(commitTs, fileId));
-          currentRecord.seal();
-          taggedRecords.add(currentRecord);
-          // the key from Result and the key being processed should be same
-          assert (currentRecord.getRecordKey().contentEquals(keyFromResult));
+          // check whether to do partition change processing
+          if (updatePartitionPath && !partitionPath.equals(currentRecord.getPartitionPath())) {
+            // delete partition old data record
+            HoodieRecord emptyRecord = new HoodieRecord(new HoodieKey(currentRecord.getRecordKey(), partitionPath),
+                    new EmptyHoodieRecordPayload());
+            emptyRecord.unseal();
+            emptyRecord.setCurrentLocation(new HoodieRecordLocation(commitTs, fileId));
+            emptyRecord.seal();
+            // insert partition new data record
+            currentRecord = new HoodieRecord(new HoodieKey(currentRecord.getRecordKey(), currentRecord.getPartitionPath()),
+                    currentRecord.getData());
+            taggedRecords.add(emptyRecord);
+            taggedRecords.add(currentRecord);
+          } else {
+            currentRecord = new HoodieRecord(new HoodieKey(currentRecord.getRecordKey(), partitionPath),
+                    currentRecord.getData());
+            currentRecord.unseal();
+            currentRecord.setCurrentLocation(new HoodieRecordLocation(commitTs, fileId));
+            currentRecord.seal();
+            taggedRecords.add(currentRecord);
+            // the key from Result and the key being processed should be same
+            assert (currentRecord.getRecordKey().contentEquals(keyFromResult));
+          }
         }
       }
       return taggedRecords.iterator();
     };
   }
 
-  private List<ResultSet> executeQuery(List<PreparedStatement> statements) throws SQLException {
+  private List<ResultSet> executeQuery(List<PreparedStatement> statements, RateLimiter limiter) throws SQLException {
     List<ResultSet> results = new ArrayList();
-    for (PreparedStatement statement : statements) {
-      ResultSet resultSet = statement.executeQuery();
-      results.add(resultSet);
+    if (statements.size() > 0) {
+      limiter.tryAcquire(statements.size());
+      for (PreparedStatement statement : statements) {
+        ResultSet resultSet = statement.executeQuery();
+        results.add(resultSet);
+      }
     }
     return results;
   }
 
-  private void execute(List<PreparedStatement> statements) throws SQLException {
-    for (PreparedStatement statement : statements) {
-      statement.execute();
+  private void execute(List<PreparedStatement> statements, RateLimiter limiter) throws SQLException {
+    rondbConnection.setAutoCommit(false);
+    if (statements.size() > 0) {
+      limiter.tryAcquire(statements.size());
+      for (PreparedStatement statement : statements) {
+        statement.execute();
+      }
     }
+    rondbConnection.commit();
+    statements.clear();
   }
 
   @Override
@@ -281,10 +314,10 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
 
   private Function2<Integer, Iterator<WriteStatus>, Iterator<WriteStatus>> updateLocationFunction() {
 
+    Integer multiPutBatchSize = config.getRonDBIndexGetBatchSize();
     return (partitionNum, statusIterator) -> {
 
       List<WriteStatus> writeStatusList = new ArrayList<>();
-
       // Grab the global RonDB connection
       synchronized (SparkHoodieRonDBIndex.class) {
         if (rondbConnection == null || rondbConnection.isClosed()) {
@@ -292,19 +325,20 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
           rondbConnection.setCatalog(config.getRonDBDatabase());
         }
       }
-
       final long startTimeForPutsTask = DateTime.now().getMillis();
       LOG.info("startTimeForPutsTask for this task: " + startTimeForPutsTask);
 
+      final RateLimiter limiter = RateLimiter.create(multiPutBatchSize, TimeUnit.SECONDS);
       while (statusIterator.hasNext()) {
-
         WriteStatus writeStatus = statusIterator.next();
         List<PreparedStatement> mutations = new ArrayList<>();
-
         try {
           long numOfInserts = writeStatus.getStat().getNumInserts();
           LOG.info("Num of inserts in this WriteStatus: " + numOfInserts);
-
+          //LOG.info("Total inserts in this job: " + this.totalNumInserts);
+          LOG.info("multiPutBatchSize for this job: " + multiPutBatchSize);
+          // Create a rate limiter that allows `multiPutBatchSize` operations per second
+          // Any calls beyond `multiPutBatchSize` within a second will be rate limited
           for (HoodieRecord rec : writeStatus.getWrittenRecords()) {
             if (!writeStatus.isErrored(rec.getKey())) {
               Option<HoodieRecordLocation> loc = rec.getNewLocation();
@@ -323,23 +357,24 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
                 mutations.add(statement);
               }
             }
+            if (mutations.size() < multiPutBatchSize) {
+              continue;
+            }
+            execute(mutations, limiter);
           }
-
-          // process puts and deletes, if any
-          rondbConnection.setAutoCommit(false);
-          execute(mutations);
-          rondbConnection.commit();
+          // process remaining puts and deletes, if any
+          execute(mutations, limiter);
         } catch (Exception e) {
-          Exception we = new Exception("Error updating index for " + writeStatus, e);
-          LOG.error(we);
-          writeStatus.setGlobalError(we);
+          throw new HoodieDependentSystemUnavailableException(HoodieDependentSystemUnavailableException.RONDB,
+                  e.getMessage());
+          //Exception we = new Exception("Error updating index for " + writeStatus, e);
+          //LOG.error(we);
+          //writeStatus.setGlobalError(we);
         }
         writeStatusList.add(writeStatus);
       }
-
       final long endPutsTime = DateTime.now().getMillis();
       LOG.info("rondb puts task time for this task: " + (endPutsTime - startTimeForPutsTask));
-
       return writeStatusList.iterator();
     };
   }

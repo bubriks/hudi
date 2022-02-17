@@ -725,6 +725,18 @@ public class HoodieWriteConfig extends DefaultHoodieConfig {
     return props.getProperty(HoodieRonDBIndexConfig.RONDB_AUTH_PASSWORD_PROP);
   }
 
+  public int getRonDBIndexGetBatchSize() {
+    return Integer.parseInt(props.getProperty(HoodieRonDBIndexConfig.RONDB_GET_BATCH_SIZE_PROP));
+  }
+
+  public int getRonDBIndexPutBatchSize() {
+    return Integer.parseInt(props.getProperty(HoodieRonDBIndexConfig.RONDB_PUT_BATCH_SIZE_PROP));
+  }
+
+  public boolean getRonDBIndexUpdatePartitionPath() {
+    return Boolean.parseBoolean(props.getProperty(HoodieRonDBIndexConfig.RONDB_INDEX_UPDATE_PARTITION_PATH));
+  }
+
   /**
    * storage properties.
    */
@@ -1407,6 +1419,9 @@ public class HoodieWriteConfig extends DefaultHoodieConfig {
           WRITE_META_KEY_PREFIXES_PROP, DEFAULT_WRITE_META_KEY_PREFIXES);
       // Make sure the props is propagated
       setDefaultOnCondition(props, !isIndexConfigSet, HoodieIndexConfig.newBuilder().withEngineType(engineType).fromProperties(props).build());
+      setDefaultOnCondition(props, props.getProperty(HoodieIndexConfig.INDEX_TYPE_PROP).equals(HoodieIndex.IndexType.RONDB.name()) ||
+              props.getProperty(HoodieIndexConfig.INDEX_TYPE_PROP).equals(HoodieIndex.IndexType.RONDB_ADVANCED.name()),
+              HoodieRonDBIndexConfig.newBuilder().fromProperties(props).build());
       setDefaultOnCondition(props, !isStorageConfigSet, HoodieStorageConfig.newBuilder().fromProperties(props).build());
       setDefaultOnCondition(props, !isCompactionConfigSet,
           HoodieCompactionConfig.newBuilder().fromProperties(props).build());

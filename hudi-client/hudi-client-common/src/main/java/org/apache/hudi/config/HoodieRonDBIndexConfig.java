@@ -48,6 +48,23 @@ public class HoodieRonDBIndexConfig extends DefaultHoodieConfig {
   public static final String RONDB_AUTH_PASSWORD_PROP = "hoodie.index.rondb.auth.password";
   public static final String DEFAULT_RONDB_AUTH_PASSWORD_PROP = "";
 
+  // CRUD config
+
+  public static final String RONDB_GET_BATCH_SIZE_PROP = "hoodie.index.rondb.get.batch.size";
+  public static final String RONDB_PUT_BATCH_SIZE_PROP = "hoodie.index.rondb.put.batch.size";
+  public static final int DEFAULT_HBASE_BATCH_SIZE = 100;
+
+  /**
+   * Only applies if index type is RonDB.
+   * <p>
+   * When set to true, an update to a record with a different partition from its existing one
+   * will insert the record to the new partition and delete it from the old partition.
+   * <p>
+   * When set to false, a record will be updated to the old partition.
+   */
+  public static final String RONDB_INDEX_UPDATE_PARTITION_PATH = "hoodie.rondb.index.update.partition.path";
+  public static final Boolean DEFAULT_RONDB_INDEX_UPDATE_PARTITION_PATH = false;
+
   public HoodieRonDBIndexConfig(final Properties props) {
     super(props);
   }
@@ -97,6 +114,21 @@ public class HoodieRonDBIndexConfig extends DefaultHoodieConfig {
       return this;
     }
 
+    public HoodieRonDBIndexConfig.Builder rondbIndexGetBatchSize(int getBatchSize) {
+      props.setProperty(RONDB_GET_BATCH_SIZE_PROP, String.valueOf(getBatchSize));
+      return this;
+    }
+
+    public HoodieRonDBIndexConfig.Builder rondbIndexPutBatchSize(int getBatchSize) {
+      props.setProperty(RONDB_PUT_BATCH_SIZE_PROP, String.valueOf(getBatchSize));
+      return this;
+    }
+
+    public HoodieRonDBIndexConfig.Builder rondbIndexUpdatePartitionPath(boolean updatePartitionPath) {
+      props.setProperty(RONDB_INDEX_UPDATE_PARTITION_PATH, String.valueOf(updatePartitionPath));
+      return this;
+    }
+
     public HoodieRonDBIndexConfig build() {
       HoodieRonDBIndexConfig config = new HoodieRonDBIndexConfig(props);
       setDefaultOnCondition(props, !props.containsKey(RONDB_TABLE_PROP), RONDB_TABLE_PROP,
@@ -109,6 +141,12 @@ public class HoodieRonDBIndexConfig extends DefaultHoodieConfig {
               String.valueOf(DEFAULT_RONDB_AUTH_USERNAME_PROP));
       setDefaultOnCondition(props, !props.containsKey(RONDB_AUTH_PASSWORD_PROP), RONDB_AUTH_PASSWORD_PROP,
               String.valueOf(DEFAULT_RONDB_AUTH_PASSWORD_PROP));
+      setDefaultOnCondition(props, !props.containsKey(RONDB_GET_BATCH_SIZE_PROP), RONDB_GET_BATCH_SIZE_PROP,
+              String.valueOf(DEFAULT_HBASE_BATCH_SIZE));
+      setDefaultOnCondition(props, !props.containsKey(RONDB_PUT_BATCH_SIZE_PROP), RONDB_PUT_BATCH_SIZE_PROP,
+              String.valueOf(DEFAULT_HBASE_BATCH_SIZE));
+      setDefaultOnCondition(props, !props.containsKey(RONDB_INDEX_UPDATE_PARTITION_PATH), RONDB_INDEX_UPDATE_PARTITION_PATH,
+              String.valueOf(DEFAULT_RONDB_INDEX_UPDATE_PARTITION_PATH));
       return config;
     }
 
