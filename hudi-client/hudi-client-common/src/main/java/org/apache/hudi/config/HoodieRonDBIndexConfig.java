@@ -65,6 +65,13 @@ public class HoodieRonDBIndexConfig extends DefaultHoodieConfig {
   public static final String RONDB_INDEX_UPDATE_PARTITION_PATH = "hoodie.rondb.index.update.partition.path";
   public static final Boolean DEFAULT_RONDB_INDEX_UPDATE_PARTITION_PATH = false;
 
+  /**
+   * When set to true, the rollback method will delete the last failed task index.
+   * The default value is false. Because deleting the index will add extra load on the RonDB cluster for each rollback.
+   */
+  public static final String RONDB_INDEX_ROLLBACK_SYNC = "hoodie.index.rondb.rollback.sync";
+  public static final Boolean DEFAULT_RONDB_INDEX_ROLLBACK_SYNC = false;
+
   public HoodieRonDBIndexConfig(final Properties props) {
     super(props);
   }
@@ -129,6 +136,11 @@ public class HoodieRonDBIndexConfig extends DefaultHoodieConfig {
       return this;
     }
 
+    public HoodieRonDBIndexConfig.Builder rondbIndexRollbackSync(boolean rollbackSync) {
+      props.setProperty(RONDB_INDEX_ROLLBACK_SYNC, String.valueOf(rollbackSync));
+      return this;
+    }
+
     public HoodieRonDBIndexConfig build() {
       HoodieRonDBIndexConfig config = new HoodieRonDBIndexConfig(props);
       setDefaultOnCondition(props, !props.containsKey(RONDB_TABLE_PROP), RONDB_TABLE_PROP,
@@ -147,6 +159,8 @@ public class HoodieRonDBIndexConfig extends DefaultHoodieConfig {
               String.valueOf(DEFAULT_HBASE_BATCH_SIZE));
       setDefaultOnCondition(props, !props.containsKey(RONDB_INDEX_UPDATE_PARTITION_PATH), RONDB_INDEX_UPDATE_PARTITION_PATH,
               String.valueOf(DEFAULT_RONDB_INDEX_UPDATE_PARTITION_PATH));
+      setDefaultOnCondition(props, !props.containsKey(RONDB_INDEX_ROLLBACK_SYNC), RONDB_INDEX_ROLLBACK_SYNC,
+              String.valueOf(DEFAULT_RONDB_INDEX_ROLLBACK_SYNC));
       return config;
     }
 

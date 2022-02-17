@@ -737,6 +737,10 @@ public class HoodieWriteConfig extends DefaultHoodieConfig {
     return Boolean.parseBoolean(props.getProperty(HoodieRonDBIndexConfig.RONDB_INDEX_UPDATE_PARTITION_PATH));
   }
 
+  public Boolean getRonDBIndexRollbackSync() {
+    return Boolean.parseBoolean(props.getProperty(HoodieRonDBIndexConfig.RONDB_INDEX_ROLLBACK_SYNC));
+  }
+
   /**
    * storage properties.
    */
