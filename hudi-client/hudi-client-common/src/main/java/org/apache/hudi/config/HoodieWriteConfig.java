@@ -1419,8 +1419,8 @@ public class HoodieWriteConfig extends DefaultHoodieConfig {
           WRITE_META_KEY_PREFIXES_PROP, DEFAULT_WRITE_META_KEY_PREFIXES);
       // Make sure the props is propagated
       setDefaultOnCondition(props, !isIndexConfigSet, HoodieIndexConfig.newBuilder().withEngineType(engineType).fromProperties(props).build());
-      setDefaultOnCondition(props, props.getProperty(HoodieIndexConfig.INDEX_TYPE_PROP).equals(HoodieIndex.IndexType.RONDB.name()) ||
-              props.getProperty(HoodieIndexConfig.INDEX_TYPE_PROP).equals(HoodieIndex.IndexType.RONDB_ADVANCED.name()),
+      setDefaultOnCondition(props, props.getProperty(HoodieIndexConfig.INDEX_TYPE_PROP).equals(HoodieIndex.IndexType.RONDB.name())
+              || props.getProperty(HoodieIndexConfig.INDEX_TYPE_PROP).equals(HoodieIndex.IndexType.RONDB_ADVANCED.name()),
               HoodieRonDBIndexConfig.newBuilder().fromProperties(props).build());
       setDefaultOnCondition(props, !isStorageConfigSet, HoodieStorageConfig.newBuilder().fromProperties(props).build());
       setDefaultOnCondition(props, !isCompactionConfigSet,

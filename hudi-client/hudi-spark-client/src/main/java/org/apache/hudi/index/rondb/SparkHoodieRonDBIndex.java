@@ -66,13 +66,12 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
   private static Connection rondbConnection = null;
   private static transient Thread shutdownThread;
 
+  private static final String commitTimestampFormat = "yyyyMMddHHmmss";
+
   private final String recordKey = "record_key";
   private final String commitTimestamp = "commit_ts";
   private final String partition = "partition_path";
   private final String fileName = "file_name";
-
-  private final String timeFormat = "yyyyMMddHHmmss";
-
   private final String tableName;
 
   public SparkHoodieRonDBIndex(HoodieWriteConfig config) {
@@ -142,7 +141,8 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
   }
 
   private PreparedStatement generateGetStatement(String key) throws SQLException {
-    String sql = "SELECT * FROM " + tableName + " WHERE " + recordKey + " = ?";
+    String sqlTemplate = "SELECT * FROM %s WHERE %s = ?";
+    String sql = String.format(sqlTemplate, tableName, recordKey);
 
     PreparedStatement p = rondbConnection.prepareStatement(sql);
     p.setBytes(1, Bytes.toBytes(key));
@@ -151,20 +151,21 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
 
   private PreparedStatement generateUpsertStatement(String key, String partitionPath, String fileId, String commitTs)
           throws SQLException, ParseException {
-    String sql = "REPLACE INTO " + tableName + " (" + recordKey + ", " + partition + ", " + fileName + ", " + commitTimestamp + ")"
-            + "VALUES (?, ?, ?, ?)";
+    String sqlTemplate = "REPLACE INTO %s (%s, %s, %s, %s) VALUES (?, ?, ?, ?)";
+    String sql = String.format(sqlTemplate, tableName, recordKey, partition, fileName, commitTimestamp);
 
     PreparedStatement p = rondbConnection.prepareStatement(sql);
     p.setBytes(1, Bytes.toBytes(key));
     p.setString(2, partitionPath);
     p.setString(3, fileId);
-    p.setTimestamp(4, new Timestamp(new SimpleDateFormat(timeFormat).parse(commitTs).getTime()));
+    p.setTimestamp(4, new Timestamp(new SimpleDateFormat(commitTimestampFormat).parse(commitTs).getTime()));
     return p;
   }
 
   private PreparedStatement generateDeleteStatement(String key)
           throws SQLException {
-    String sql = "DELETE FROM " + tableName + " WHERE " + recordKey + " = ?";
+    String sqlTemplate = "DELETE FROM %s WHERE %s = ?";
+    String sql = String.format(sqlTemplate, tableName, recordKey);
 
     PreparedStatement p = rondbConnection.prepareStatement(sql);
     p.setBytes(1, Bytes.toBytes(key));
@@ -240,7 +241,7 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
           }
           // get info
           String keyFromResult = Bytes.toString(result.getBytes(recordKey));
-          String commitTs = DateTimeFormat.forPattern(timeFormat).print(result.getTimestamp(commitTimestamp).getTime());
+          String commitTs = DateTimeFormat.forPattern(commitTimestampFormat).print(result.getTimestamp(commitTimestamp).getTime());
           String fileId = result.getString(fileName);
           String partitionPath = result.getString(partition);
           if (!checkIfValidCommit(metaClient, commitTs)) {
@@ -365,11 +366,10 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
           // process remaining puts and deletes, if any
           execute(mutations, limiter);
         } catch (Exception e) {
-          throw new HoodieDependentSystemUnavailableException(HoodieDependentSystemUnavailableException.RONDB,
-                  e.getMessage());
-          //Exception we = new Exception("Error updating index for " + writeStatus, e);
-          //LOG.error(we);
-          //writeStatus.setGlobalError(we);
+          Exception we = new Exception("Error updating index for " + writeStatus, e);
+          LOG.error(we);
+          writeStatus.setGlobalError(we);
+          throw we;
         }
         writeStatusList.add(writeStatus);
       }
