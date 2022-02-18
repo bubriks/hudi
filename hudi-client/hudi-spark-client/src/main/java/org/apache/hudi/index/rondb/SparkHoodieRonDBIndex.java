@@ -159,9 +159,7 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
   }
 
   private PreparedStatement generateGetStatement(String minStamp, String maxStamp) throws SQLException, ParseException {
-    String sqlTemplate = "SELECT * "
-            + "FROM %1$s "
-            + "WHERE s1.%6$s BETWEEN ? AND ?";
+    String sqlTemplate = "SELECT * FROM %1$s WHERE %6$s BETWEEN ? AND ?";
     String sql = String.format(sqlTemplate, tableName, recordKey, recordCommitTimestamp, recordPartitionPath, recordFileName, recordTimestamp);
 
     PreparedStatement p = rondbConnection.prepareStatement(sql);
