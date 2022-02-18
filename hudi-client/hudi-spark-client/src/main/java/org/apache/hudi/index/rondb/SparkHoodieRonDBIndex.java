@@ -93,21 +93,24 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
   private void setUpEnvironment() throws SQLException {
     Statement stmt = rondbConnection.createStatement();
 
-    String query = "CREATE DATABASE IF NOT EXISTS " + config.getRonDBDatabase();
-    stmt.execute(query);
+    String sqlTemplate = "CREATE DATABASE IF NOT EXISTS %1$s";
+    String sql = String.format(sqlTemplate, config.getRonDBDatabase());
+    stmt.execute(sql);
 
-    query = "USE " + config.getRonDBDatabase();
-    stmt.execute(query);
+    sqlTemplate = "USE %1$s";
+    sql = String.format(sqlTemplate, config.getRonDBDatabase());
+    stmt.execute(sql);
 
-    query = "CREATE TABLE IF NOT EXISTS " + tableName + " (\n"
-            + "  `" + recordKey + "` VARBINARY(255)  NOT NULL, \n"
-            + "  `" + recordTimestamp + "` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, \n"
-            + "  `" + recordCommitTimestamp + "` TIMESTAMP NOT NULL, \n"
-            + "  `" + recordPartitionPath + "` VARCHAR(255) NOT NULL, \n"
-            + "  `" + recordFileName + "` VARCHAR(255) NOT NULL, \n"
-            + "   PRIMARY KEY (" + recordKey + ", " + recordTimestamp + ") \n"
-            + ")";
-    stmt.execute(query);
+    sqlTemplate = "CREATE TABLE IF NOT EXISTS %1$s (\n"
+                + "  %2$s VARBINARY(255) NOT NULL, \n"
+                + "  %6$s TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, \n"
+                + "  %3$s TIMESTAMP NOT NULL, \n"
+                + "  %4$s VARCHAR(255) NOT NULL, \n"
+                + "  %5$s VARCHAR(255) NOT NULL, \n"
+                + "  PRIMARY KEY (%2$s, %6$s) \n"
+                + ")";
+    sql = String.format(sqlTemplate, tableName, recordKey, recordCommitTimestamp, recordPartitionPath, recordFileName, recordTimestamp);
+    stmt.execute(sql);
 
     stmt.close();
   }
