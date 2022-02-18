@@ -50,12 +50,10 @@ import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -68,9 +66,10 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
   private static transient Thread shutdownThread;
 
   private final String recordKey = "record_key";
-  private final String commitTimestamp = "commit_ts";
-  private final String partition = "partition_path";
-  private final String fileName = "file_name";
+  private final String recordTimestamp = "ts";
+  private final String recordCommitTimestamp = "commit_ts";
+  private final String recordPartitionPath = "partition_path";
+  private final String recordFileName = "file_name";
   private final String tableName;
 
   public SparkHoodieRonDBIndex(HoodieWriteConfig config) {
@@ -102,10 +101,11 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
 
     query = "CREATE TABLE IF NOT EXISTS " + tableName + " (\n"
             + "  `" + recordKey + "` VARBINARY(255)  NOT NULL, \n"
-            + "  `" + commitTimestamp + "` TIMESTAMP NOT NULL, \n"
-            + "  `" + partition + "` VARCHAR(255) NOT NULL, \n"
-            + "  `" + fileName + "` VARCHAR(255) NOT NULL, \n"
-            + "   PRIMARY KEY (" + recordKey + ", " + commitTimestamp + ") \n"
+            + "  `" + recordTimestamp + "` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, \n"
+            + "  `" + recordCommitTimestamp + "` TIMESTAMP NOT NULL, \n"
+            + "  `" + recordPartitionPath + "` VARCHAR(255) NOT NULL, \n"
+            + "  `" + recordFileName + "` VARCHAR(255) NOT NULL, \n"
+            + "   PRIMARY KEY (" + recordKey + ", " + recordTimestamp + ") \n"
             + ")";
     stmt.execute(query);
 
@@ -140,8 +140,15 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
   }
 
   private PreparedStatement generateGetStatement(String key) throws SQLException {
-    String sqlTemplate = "SELECT * FROM %1$s WHERE %2$s = ? AND %3$s IN (SELECT max(%3$s) FROM %1$s)";
-    String sql = String.format(sqlTemplate, tableName, recordKey, commitTimestamp);
+    String sqlTemplate = "SELECT * "
+            + "FROM %1$s s1 "
+            + "JOIN ( "
+            + "  SELECT %2$s, MAX(%6$s) AS %6$s "
+            + "  FROM %1$s "
+            + "  GROUP BY %2$s) AS s2 "
+            + "  ON s1.%2$s = s2.%2$s AND s1.%6$s = s2.%6$s "
+            + "WHERE s1.%2$s = ?";
+    String sql = String.format(sqlTemplate, tableName, recordKey, recordCommitTimestamp, recordPartitionPath, recordFileName, recordTimestamp);
 
     PreparedStatement p = rondbConnection.prepareStatement(sql);
     p.setBytes(1, key.getBytes());
@@ -149,8 +156,10 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
   }
 
   private PreparedStatement generateGetStatement(String minStamp, String maxStamp) throws SQLException, ParseException {
-    String sqlTemplate = "SELECT * FROM %1$s WHERE %2$s BETWEEN ? AND ? AND %2$s IN (SELECT max(%2$s) FROM %1$s)";
-    String sql = String.format(sqlTemplate, tableName, commitTimestamp);
+    String sqlTemplate = "SELECT * "
+            + "FROM %1$s "
+            + "WHERE s1.%6$s BETWEEN ? AND ?";
+    String sql = String.format(sqlTemplate, tableName, recordKey, recordCommitTimestamp, recordPartitionPath, recordFileName, recordTimestamp);
 
     PreparedStatement p = rondbConnection.prepareStatement(sql);
     p.setTimestamp(1, new Timestamp(HoodieActiveTimeline.COMMIT_FORMATTER.parse(minStamp).getTime()));
@@ -159,8 +168,15 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
   }
 
   private PreparedStatement generateGetStatement(String key, String minStamp, String maxStamp) throws SQLException, ParseException {
-    String sqlTemplate = "SELECT * FROM %1$s WHERE %2$s = ? AND %3$s BETWEEN ? AND ? AND %3$s IN (SELECT max(%3$s) FROM %1$s)";
-    String sql = String.format(sqlTemplate, tableName, recordKey, commitTimestamp);
+    String sqlTemplate = "SELECT * "
+            + "FROM %1$s s1 "
+            + "JOIN ( "
+            + "  SELECT %2$s, MAX(%6$s) AS %6$s "
+            + "  FROM %1$s "
+            + "  GROUP BY %2$s) AS s2 "
+            + "  ON s1.%2$s = s2.%2$s AND s1.%6$s = s2.%6$s "
+            + "WHERE s1.%2$s = ? AND s1.%6$s BETWEEN ? AND ?";
+    String sql = String.format(sqlTemplate, tableName, recordKey, recordCommitTimestamp, recordPartitionPath, recordFileName, recordTimestamp);
 
     PreparedStatement p = rondbConnection.prepareStatement(sql);
     p.setBytes(1, key.getBytes());
@@ -169,23 +185,23 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
     return p;
   }
 
-  private PreparedStatement generateUpsertStatement(String key, String partitionPath, String fileId, String commitTs)
+  private PreparedStatement generateInsertStatement(String key, String partitionPath, String fileName, String commitTs)
           throws SQLException, ParseException {
-    String sqlTemplate = "REPLACE INTO %1$s (%2$s, %3$s, %4$s, %5$s) VALUES (?, ?, ?, ?)";
-    String sql = String.format(sqlTemplate, tableName, recordKey, partition, fileName, commitTimestamp);
+    String sqlTemplate = "INSERT INTO %1$s (%2$s, %3$s, %4$s, %5$s) VALUES (?, ?, ?, ?)";
+    String sql = String.format(sqlTemplate, tableName, recordKey, recordCommitTimestamp, recordPartitionPath, recordFileName, recordTimestamp);
 
     PreparedStatement p = rondbConnection.prepareStatement(sql);
     p.setBytes(1, key.getBytes());
-    p.setString(2, partitionPath);
-    p.setString(3, fileId);
-    p.setTimestamp(4, new Timestamp(HoodieActiveTimeline.COMMIT_FORMATTER.parse(commitTs).getTime()));
+    p.setTimestamp(2, new Timestamp(HoodieActiveTimeline.COMMIT_FORMATTER.parse(commitTs).getTime()));
+    p.setString(3, partitionPath);
+    p.setString(4, fileName);
     return p;
   }
 
   private PreparedStatement generateDeleteStatement(String key)
           throws SQLException {
     String sqlTemplate = "DELETE FROM %1$s WHERE %2$s = ?";
-    String sql = String.format(sqlTemplate, tableName, recordKey);
+    String sql = String.format(sqlTemplate, tableName, recordKey, recordCommitTimestamp, recordPartitionPath, recordFileName, recordTimestamp);
 
     PreparedStatement p = rondbConnection.prepareStatement(sql);
     p.setBytes(1, key.getBytes());
@@ -249,9 +265,6 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
         }
         // get results for batch from RonDB
         List<ResultSet> results = executeQuery(statements, limiter);
-        // clear statements to be GC'd
-        statements.clear();
-
         for (ResultSet result : results) {
           // first, attempt to grab location from RonDB
           HoodieRecord currentRecord = currentBatchOfRecords.remove(0);
@@ -260,16 +273,15 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
             continue;
           }
           // get info
-          String keyFromResult = new String(result.getBytes(recordKey));
-          String commitTs = HoodieActiveTimeline.COMMIT_FORMATTER.format(result.getTimestamp(commitTimestamp));
-          String fileId = result.getString(fileName);
-          String partitionPath = result.getString(partition);
+          String key = new String(result.getBytes(recordKey));
+          String commitTs = HoodieActiveTimeline.COMMIT_FORMATTER.format(result.getTimestamp(recordCommitTimestamp));
+          String fileId = result.getString(recordFileName);
+          String partitionPath = result.getString(recordPartitionPath);
           if (!checkIfValidCommit(metaClient, commitTs)) {
             // if commit is invalid, treat this as a new taggedRecord
             taggedRecords.add(currentRecord);
             continue;
           }
-
           // check whether to do partition change processing
           if (updatePartitionPath && !partitionPath.equals(currentRecord.getPartitionPath())) {
             // delete partition old data record
@@ -291,7 +303,7 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
             currentRecord.seal();
             taggedRecords.add(currentRecord);
             // the key from Result and the key being processed should be same
-            assert (currentRecord.getRecordKey().contentEquals(keyFromResult));
+            assert (currentRecord.getRecordKey().contentEquals(key));
           }
         }
       }
@@ -308,6 +320,8 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
         results.add(resultSet);
       }
     }
+    // clear statements to be GC'd
+    statements.clear();
     return results;
   }
 
@@ -378,7 +392,7 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
                   continue;
                 }
 
-                PreparedStatement statement = generateUpsertStatement(rec.getRecordKey(), rec.getPartitionPath(),
+                PreparedStatement statement = generateInsertStatement(rec.getRecordKey(), rec.getPartitionPath(),
                         loc.get().getFileId(), loc.get().getInstantTime());
                 mutations.add(statement);
               } else {
@@ -413,7 +427,7 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
     int multiGetBatchSize = config.getRonDBIndexGetBatchSize();
     boolean rollbackSync = config.getRonDBIndexRollbackSync();
 
-    if (!rollbackSync) {
+    if (!config.getRonDBIndexRollbackSync()) {
       // Default Rollback in RonDBIndex is managed via method {@link #checkIfValidCommit()}
       return true;
     }
@@ -431,34 +445,35 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
       ResultSet currentResultSet = ps.executeQuery();
 
       List<PreparedStatement> statements = new ArrayList<>();
-      Map<String, String> currentVersionResults = new HashMap<>();
+      List<ResultSet> currentVersionResults = new ArrayList<>();
       List<PreparedStatement> mutations = new ArrayList<>();
       while (currentResultSet.next()) {
-        String currentKeyFromResult = new String(currentResultSet.getBytes(recordKey));
-        String currentPartitionPath = currentResultSet.getString(partition);
-        currentVersionResults.put(currentKeyFromResult, currentPartitionPath);
+        currentVersionResults.add(currentResultSet);
+        String currentKey = new String(currentResultSet.getBytes(recordKey));
 
-        statements.add(generateGetStatement(currentKeyFromResult, HoodieActiveTimeline.COMMIT_FORMATTER.format(new Date(0)), instantTime));
+        statements.add(generateGetStatement(currentKey, HoodieActiveTimeline.COMMIT_FORMATTER.format(new Date(0)), instantTime));
         if (statements.size() < multiGetBatchSize) {
           continue;
         }
         List<ResultSet> lastVersionResults = executeQuery(statements);
 
-        for (ResultSet lastVersionResult : lastVersionResults) {
+        for (int i = 0; i < lastVersionResults.size(); i++) {
+          ResultSet lastVersionResult = lastVersionResults.get(i);
           boolean next = lastVersionResult.next();
           if (!next && rollbackSync) {
-            String keyResult = new String(lastVersionResult.getBytes(recordKey));
-            mutations.add(generateDeleteStatement(keyResult));
+            ResultSet currentVersionResult = currentVersionResults.get(i);
+            String key = new String(currentVersionResult.getBytes(recordKey));
+            mutations.add(generateDeleteStatement(key));
           }
 
           if (next) {
-            String oldPath = lastVersionResult.getString(partition);
-            String keyResult = new String(lastVersionResult.getBytes(recordKey));
-            String nowPath = currentVersionResults.get(keyResult);
+            String oldPath = lastVersionResult.getString(recordPartitionPath);
+            String nowPath = currentVersionResults.get(i).getString(recordPartitionPath);
             if (!oldPath.equals(nowPath) || rollbackSync) {
-              String commitTs = HoodieActiveTimeline.COMMIT_FORMATTER.format(lastVersionResult.getTimestamp(commitTimestamp));
-              String fileId = lastVersionResult.getString(fileName);
-              mutations.add(generateUpsertStatement(keyResult, commitTs, fileId, oldPath));
+              String key = new String(lastVersionResult.getBytes(recordKey));
+              String commitTs = HoodieActiveTimeline.COMMIT_FORMATTER.format(lastVersionResult.getTimestamp(recordCommitTimestamp));
+              String fileId = lastVersionResult.getString(recordFileName);
+              mutations.add(generateInsertStatement(key, commitTs, fileId, oldPath));
             }
           }
         }
