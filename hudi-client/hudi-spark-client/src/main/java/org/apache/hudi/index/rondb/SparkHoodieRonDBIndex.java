@@ -141,13 +141,10 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
 
   private PreparedStatement generateGetStatement(String key) throws SQLException {
     String sqlTemplate = "SELECT * "
-            + "FROM %1$s s1 "
-            + "JOIN ( "
-            + "  SELECT %2$s, MAX(%3$s) AS %3$s "
-            + "  FROM %1$s "
-            + "  GROUP BY %2$s) AS s2 "
-            + "  ON s1.%2$s = s2.%2$s AND s1.%3$s = s2.%3$s "
-            + "WHERE s1.%2$s = ?";
+            + "FROM %1$s "
+            + "WHERE %2$s = ? "
+            + "ORDER BY %2$s DESC "
+            + "LIMIT 1";
     String sql = String.format(sqlTemplate, tableName, recordKey, recordCommitTimestamp, recordPartitionPath, recordFileId);
 
     PreparedStatement p = rondbConnection.prepareStatement(sql);
