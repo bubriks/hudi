@@ -70,6 +70,11 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
   private final String recordFileId = "file_id";
   private final String tableName;
 
+  private final String sqlGetTemplate = "SELECT * FROM %1$s WHERE %2$s = ? ORDER BY %2$s DESC LIMIT 1";
+  private final String sqlInsertTemplate = "INSERT INTO %1$s (%2$s, %3$s, %4$s, %5$s) VALUES (?, ?, ?, ?)";
+  private final String sqlDeleteTemplate = "DELETE FROM %1$s WHERE %2$s = ?";
+  private final String sqlRoleBackTemplate = "DELETE FROM %1$s WHERE %3$s > ?";
+
   public SparkHoodieRonDBIndex(HoodieWriteConfig config) {
     super(config);
     this.tableName = config.getRonDBTable();
@@ -139,50 +144,37 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
     }
   }
 
+  private PreparedStatement generateStatement(String sqlTemplate) throws SQLException {
+    String sql = String.format(sqlTemplate, tableName, recordKey, recordCommitTimestamp, recordPartitionPath, recordFileId);
+    return rondbConnection.prepareStatement(sql);
+  }
+
   private PreparedStatement generateGetStatement(String key) throws SQLException {
-    String sqlTemplate = "SELECT * "
-            + "FROM %1$s "
-            + "WHERE %2$s = ? "
-            + "ORDER BY %2$s DESC "
-            + "LIMIT 1";
-    String sql = String.format(sqlTemplate, tableName, recordKey, recordCommitTimestamp, recordPartitionPath, recordFileId);
-
-    PreparedStatement p = rondbConnection.prepareStatement(sql);
-    p.setBytes(1, key.getBytes());
-    return p;
+    // statement.addBatch() does not offer select capabilities
+    PreparedStatement statement = generateStatement(sqlGetTemplate);
+    statement.setBytes(1, key.getBytes());
+    return statement;
   }
 
-  private PreparedStatement generateInsertStatement(String key, String partitionPath, String fileName, String commitTs)
+  private void addInsertBatch(PreparedStatement statement, String key, String partitionPath, String fileName, String commitTs)
           throws SQLException, ParseException {
-    String sqlTemplate = "INSERT INTO %1$s (%2$s, %3$s, %4$s, %5$s) VALUES (?, ?, ?, ?)";
-    String sql = String.format(sqlTemplate, tableName, recordKey, recordCommitTimestamp, recordPartitionPath, recordFileId);
-
-    PreparedStatement p = rondbConnection.prepareStatement(sql);
-    p.setBytes(1, key.getBytes());
-    p.setTimestamp(2, new Timestamp(HoodieActiveTimeline.COMMIT_FORMATTER.parse(commitTs).getTime()));
-    p.setString(3, partitionPath);
-    p.setString(4, fileName);
-    return p;
+    statement.setBytes(1, key.getBytes());
+    statement.setTimestamp(2, new Timestamp(HoodieActiveTimeline.COMMIT_FORMATTER.parse(commitTs).getTime()));
+    statement.setString(3, partitionPath);
+    statement.setString(4, fileName);
+    statement.addBatch();
   }
 
-  private PreparedStatement generateDeleteStatement(String key)
+  private void addDeleteBatch(PreparedStatement statement, String key)
           throws SQLException {
-    String sqlTemplate = "DELETE FROM %1$s WHERE %2$s = ?";
-    String sql = String.format(sqlTemplate, tableName, recordKey, recordCommitTimestamp, recordPartitionPath, recordFileId);
-
-    PreparedStatement p = rondbConnection.prepareStatement(sql);
-    p.setBytes(1, key.getBytes());
-    return p;
+    statement.setBytes(1, key.getBytes());
+    statement.addBatch();
   }
 
-  private PreparedStatement generateRoleBackStatement(String instantTime)
+  private void addRoleBackBatch(PreparedStatement statement, String instantTime)
           throws SQLException, ParseException {
-    String sqlTemplate = "DELETE FROM %1$s WHERE %3$s > ?";
-    String sql = String.format(sqlTemplate, tableName, recordKey, recordCommitTimestamp, recordPartitionPath, recordFileId);
-
-    PreparedStatement p = rondbConnection.prepareStatement(sql);
-    p.setTimestamp(1, new Timestamp(HoodieActiveTimeline.COMMIT_FORMATTER.parse(instantTime).getTime()));
-    return p;
+    statement.setTimestamp(1, new Timestamp(HoodieActiveTimeline.COMMIT_FORMATTER.parse(instantTime).getTime()));
+    statement.addBatch();
   }
 
   private boolean checkIfValidCommit(HoodieTableMetaClient metaClient, String commitTs) {
@@ -295,8 +287,7 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
     if (statements.size() > 0) {
       limiter.tryAcquire(statements.size());
       for (PreparedStatement statement : statements) {
-        ResultSet resultSet = statement.executeQuery();
-        results.add(resultSet);
+        results.add(statement.executeQuery());
       }
     }
     // clear statements to be GC'd
@@ -304,16 +295,14 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
     return results;
   }
 
-  private void execute(List<PreparedStatement> statements, RateLimiter limiter) throws SQLException {
-    rondbConnection.setAutoCommit(false);
-    if (statements.size() > 0) {
-      limiter.tryAcquire(statements.size());
-      for (PreparedStatement statement : statements) {
-        statement.execute();
-      }
+  private void execute(PreparedStatement statement, int currentBatchSize, RateLimiter limiter) throws SQLException {
+    if (currentBatchSize > 0) {
+      limiter.tryAcquire(currentBatchSize);
+      rondbConnection.setAutoCommit(false);
+      statement.executeBatch();
+      rondbConnection.commit();
+      statement.clearBatch();
     }
-    rondbConnection.commit();
-    statements.clear();
   }
 
   @Override
@@ -343,9 +332,15 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
       LOG.info("startTimeForPutsTask for this task: " + startTimeForPutsTask);
 
       final RateLimiter limiter = RateLimiter.create(multiPutBatchSize, TimeUnit.SECONDS);
+
+      PreparedStatement insertStatement = generateStatement(sqlInsertTemplate);
+      PreparedStatement deleteStatement = generateStatement(sqlDeleteTemplate);
+      // have to keep track of the current batch size as PreparedStatement doesn't provide such value
+      int currentInsertBatchSize = 0;
+      int currentDeleteBatchSize = 0;
+
       while (statusIterator.hasNext()) {
         WriteStatus writeStatus = statusIterator.next();
-        List<PreparedStatement> mutations = new ArrayList<>();
         try {
           long numOfInserts = writeStatus.getStat().getNumInserts();
           LOG.info("Num of inserts in this WriteStatus: " + numOfInserts);
@@ -361,22 +356,26 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
                   continue;
                 }
 
-                PreparedStatement statement = generateInsertStatement(rec.getRecordKey(), rec.getPartitionPath(),
+                addInsertBatch(insertStatement, rec.getRecordKey(), rec.getPartitionPath(),
                         loc.get().getFileId(), loc.get().getInstantTime());
-                mutations.add(statement);
+                currentInsertBatchSize = currentInsertBatchSize + 1;
               } else {
                 // Delete existing index for a deleted record
-                PreparedStatement statement = generateDeleteStatement(rec.getRecordKey());
-                mutations.add(statement);
+                addDeleteBatch(deleteStatement, rec.getRecordKey());
+                currentDeleteBatchSize = currentDeleteBatchSize + 1;
               }
             }
-            if (mutations.size() < multiPutBatchSize) {
+            if (currentInsertBatchSize + currentDeleteBatchSize < multiPutBatchSize) {
               continue;
             }
-            execute(mutations, limiter);
+            execute(insertStatement, currentInsertBatchSize, limiter);
+            execute(deleteStatement, currentDeleteBatchSize, limiter);
+            currentInsertBatchSize = 0;
+            currentDeleteBatchSize = 0;
           }
           // process remaining puts and deletes, if any
-          execute(mutations, limiter);
+          execute(insertStatement, currentInsertBatchSize, limiter);
+          execute(deleteStatement, currentDeleteBatchSize, limiter);
         } catch (Exception e) {
           Exception we = new Exception("Error updating index for " + writeStatus, e);
           LOG.error(we);
@@ -393,6 +392,7 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
 
   @Override
   public boolean rollbackCommit(String instantTime) {
+    int multiGetBatchSize = config.getHbaseIndexGetBatchSize();
     boolean rollbackSync = config.getRonDBIndexRollbackSync();
 
     if (!rollbackSync) {
@@ -407,8 +407,12 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
           rondbConnection.setCatalog(config.getRonDBDatabase());
         }
       }
-      PreparedStatement ps = generateRoleBackStatement(instantTime);
-      ps.execute();
+
+      final RateLimiter limiter = RateLimiter.create(multiGetBatchSize, TimeUnit.SECONDS);
+
+      PreparedStatement roleBackStatement = generateStatement(sqlRoleBackTemplate);
+      addRoleBackBatch(roleBackStatement, instantTime);
+      execute(roleBackStatement, 1, limiter);
     } catch (SQLException | ParseException e) {
       LOG.error("rondb index roll back failed", e);
       return false;
