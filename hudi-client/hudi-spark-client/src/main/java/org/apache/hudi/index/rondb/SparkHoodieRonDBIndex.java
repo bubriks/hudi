@@ -73,7 +73,7 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
   private final String sqlGetTemplate = "SELECT * FROM %1$s WHERE %2$s = ? ORDER BY %2$s DESC LIMIT 1";
   private final String sqlInsertTemplate = "INSERT INTO %1$s (%2$s, %3$s, %4$s, %5$s) VALUES (?, ?, ?, ?)";
   private final String sqlDeleteTemplate = "DELETE FROM %1$s WHERE %2$s = ?";
-  private final String sqlRoleBackTemplate = "DELETE FROM %1$s WHERE %3$s > ?";
+  private final String sqlRollbackTemplate = "DELETE FROM %1$s WHERE %3$s > ?";
 
   public SparkHoodieRonDBIndex(HoodieWriteConfig config) {
     super(config);
@@ -171,7 +171,7 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
     statement.addBatch();
   }
 
-  private void addRoleBackBatch(PreparedStatement statement, String instantTime)
+  private void addRollbackBatch(PreparedStatement statement, String instantTime)
           throws SQLException, ParseException {
     statement.setTimestamp(1, new Timestamp(HoodieActiveTimeline.COMMIT_FORMATTER.parse(instantTime).getTime()));
     statement.addBatch();
@@ -295,16 +295,6 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
     return results;
   }
 
-  private void execute(PreparedStatement statement, int currentBatchSize, RateLimiter limiter) throws SQLException {
-    if (currentBatchSize > 0) {
-      limiter.tryAcquire(currentBatchSize);
-      rondbConnection.setAutoCommit(false);
-      statement.executeBatch();
-      rondbConnection.commit();
-      statement.clearBatch();
-    }
-  }
-
   @Override
   public JavaRDD<WriteStatus> updateLocation(JavaRDD<WriteStatus> writeStatusRDD, HoodieEngineContext context,
                                              HoodieTable<T, JavaRDD<HoodieRecord<T>>, JavaRDD<HoodieKey>,
@@ -332,6 +322,9 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
       LOG.info("startTimeForPutsTask for this task: " + startTimeForPutsTask);
 
       final RateLimiter limiter = RateLimiter.create(multiPutBatchSize, TimeUnit.SECONDS);
+
+      // Auto Commit must be set to false
+      rondbConnection.setAutoCommit(false);
 
       PreparedStatement insertStatement = generateStatement(sqlInsertTemplate);
       PreparedStatement deleteStatement = generateStatement(sqlDeleteTemplate);
@@ -365,18 +358,36 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
                 currentDeleteBatchSize = currentDeleteBatchSize + 1;
               }
             }
-            if (currentInsertBatchSize + currentDeleteBatchSize < multiPutBatchSize) {
+            int currentBatchSize = currentInsertBatchSize + currentDeleteBatchSize;
+
+            if (currentBatchSize < multiPutBatchSize) {
               continue;
             }
-            execute(insertStatement, currentInsertBatchSize, limiter);
-            execute(deleteStatement, currentDeleteBatchSize, limiter);
+
+            if (currentBatchSize > 0) {
+              limiter.tryAcquire(currentBatchSize);
+              insertStatement.executeBatch();
+              currentInsertBatchSize = 0;
+              deleteStatement.executeBatch();
+              currentDeleteBatchSize = 0;
+            }
+          }
+
+          int currentBatchSize = currentInsertBatchSize + currentDeleteBatchSize;
+
+          // process remaining puts and deletes, if any
+          if (currentBatchSize > 0) {
+            limiter.tryAcquire(currentBatchSize);
+            insertStatement.executeBatch();
             currentInsertBatchSize = 0;
+            deleteStatement.executeBatch();
             currentDeleteBatchSize = 0;
           }
-          // process remaining puts and deletes, if any
-          execute(insertStatement, currentInsertBatchSize, limiter);
-          execute(deleteStatement, currentDeleteBatchSize, limiter);
         } catch (Exception e) {
+          rondbConnection.rollback();
+          // Make it back to default.
+          rondbConnection.setAutoCommit(true);
+
           Exception we = new Exception("Error updating index for " + writeStatus, e);
           LOG.error(we);
           writeStatus.setGlobalError(we);
@@ -384,6 +395,12 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
         }
         writeStatusList.add(writeStatus);
       }
+      insertStatement.close();
+      deleteStatement.close();
+
+      // Make it back to default.
+      rondbConnection.setAutoCommit(true);
+
       final long endPutsTime = DateTime.now().getMillis();
       LOG.info("rondb puts task time for this task: " + (endPutsTime - startTimeForPutsTask));
       return writeStatusList.iterator();
@@ -408,12 +425,35 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
         }
       }
 
+      // Auto Commit must be set to false
+      rondbConnection.setAutoCommit(false);
+
       final RateLimiter limiter = RateLimiter.create(multiGetBatchSize, TimeUnit.SECONDS);
 
-      PreparedStatement roleBackStatement = generateStatement(sqlRoleBackTemplate);
-      addRoleBackBatch(roleBackStatement, instantTime);
-      execute(roleBackStatement, 1, limiter);
+      PreparedStatement rollbackStatement = generateStatement(sqlRollbackTemplate);
+      int currentRollbackBatchSize = 0;
+
+      addRollbackBatch(rollbackStatement, instantTime);
+      currentRollbackBatchSize = currentRollbackBatchSize + 1;
+
+      if (currentRollbackBatchSize > 0) {
+        limiter.tryAcquire(currentRollbackBatchSize);
+        rollbackStatement.executeBatch();
+        currentRollbackBatchSize = 0;
+      }
+
+      rollbackStatement.close();
+
+      // Make it back to default.
+      rondbConnection.setAutoCommit(true);
     } catch (SQLException | ParseException e) {
+      try {
+        rondbConnection.rollback();
+        // Make it back to default.
+        rondbConnection.setAutoCommit(true);
+      } catch (SQLException ex1) {
+        LOG.error("rondb database roll back failed", ex1);
+      }
       LOG.error("rondb index roll back failed", e);
       return false;
     }
