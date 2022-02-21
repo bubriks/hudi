@@ -62,7 +62,7 @@ public class HoodieRonDBIndexConfig extends DefaultHoodieConfig {
    * <p>
    * When set to false, a record will be updated to the old partition.
    */
-  public static final String RONDB_INDEX_UPDATE_PARTITION_PATH = "hoodie.rondb.index.update.partition.path";
+  public static final String RONDB_INDEX_UPDATE_PARTITION_PATH = "hoodie.index.rondb.update.partition.path";
   public static final Boolean DEFAULT_RONDB_INDEX_UPDATE_PARTITION_PATH = false;
 
   /**
