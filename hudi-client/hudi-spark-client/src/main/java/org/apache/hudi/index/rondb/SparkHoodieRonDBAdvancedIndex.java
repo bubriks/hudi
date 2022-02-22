@@ -71,7 +71,7 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
 
   public SparkHoodieRonDBAdvancedIndex(HoodieWriteConfig config) {
     super(config);
-    this.tableName = config.getRonDBTable();
+    this.tableName = "temp";
     init();
     addShutDownHook();
 
@@ -99,7 +99,7 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
     rondbConnection = getRonDBConnection();
     try {
       setUpEnvironment();
-      rondbConnection.setCatalog(config.getRonDBDatabase());
+      rondbConnection.setCatalog("temp_db");
     } catch (SQLException e) {
       throw new HoodieDependentSystemUnavailableException(HoodieDependentSystemUnavailableException.RONDB,
               "problem initializing RonDB: " + e.getMessage());
@@ -109,10 +109,10 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
   private void setUpEnvironment() throws SQLException {
     Statement stmt = rondbConnection.createStatement();
 
-    String query = "CREATE DATABASE IF NOT EXISTS " + config.getRonDBDatabase();
+    String query = "CREATE DATABASE IF NOT EXISTS " + "temp_db";
     stmt.execute(query);
 
-    query = "USE " + config.getRonDBDatabase();
+    query = "USE " + "temp_db";
     stmt.execute(query);
 
     query = "CREATE TABLE IF NOT EXISTS " + tableName + " (\n"
@@ -130,10 +130,10 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
   private Connection getRonDBConnection() {
     try {
       DriverManager.registerDriver(new com.mysql.jdbc.Driver());
-      return DriverManager.getConnection(config.getRonDBUrl(), config.getRonDBUsername(), config.getRonDBPassword());
+      return DriverManager.getConnection("jdbc:mysql://localhost:3306", "root", "");
     } catch (SQLException e) {
       throw new HoodieDependentSystemUnavailableException(HoodieDependentSystemUnavailableException.RONDB,
-          config.getRonDBUrl());
+          "jdbc:mysql://localhost:3306");
     }
   }
 
@@ -218,7 +218,7 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
       synchronized (SparkHoodieRonDBAdvancedIndex.class) {
         if (rondbConnection == null || rondbConnection.isClosed()) {
           rondbConnection = getRonDBConnection();
-          rondbConnection.setCatalog(config.getRonDBDatabase());
+          rondbConnection.setCatalog("temp_db");
         }
       }
 
@@ -312,7 +312,7 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
       synchronized (SparkHoodieRonDBAdvancedIndex.class) {
         if (rondbConnection == null || rondbConnection.isClosed()) {
           rondbConnection = getRonDBConnection();
-          rondbConnection.setCatalog(config.getRonDBDatabase());
+          rondbConnection.setCatalog("temp_db");
         }
       }
 
