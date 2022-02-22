@@ -15,22 +15,26 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-<persistence version="2.1" xmlns="http://xmlns.jcp.org/xml/ns/persistence" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/persistence http://xmlns.jcp.org/xml/ns/persistence/persistence_2_1.xsd">
+<persistence version="2.0"
+             xmlns="http://java.sun.com/xml/ns/persistence" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="http://java.sun.com/xml/ns/persistence http://java.sun.com/xml/ns/persistence/persistence_2_0.xsd">
+
   <!-- Define a name used to get an entity manager. Define that you will
   complete transactions with the DB  -->
   <persistence-unit name="index" transaction-type="RESOURCE_LOCAL">
     <!-- Define the class for Eclipse which implements JPA -->
-    <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+    <provider>org.eclipse.persistence.jpa.PersistenceProvider</provider>
     <!-- Define the object that should be persisted in the database -->
     <class>org.apache.hudi.index.rondb.IndexRecord</class>
     <class>org.apache.hudi.index.rondb.IndexRecordId</class>
 
     <properties>
-      <property name="hibernate.hbm2ddl.auto" value="update" />
       <property name="javax.persistence.jdbc.driver" value="com.mysql.jdbc.Driver" />
       <property name="javax.persistence.jdbc.url" value="jdbc:mysql://localhost:3306/hudi?createDatabaseIfNotExist=true" />
       <property name="javax.persistence.jdbc.user" value="root" />
       <property name="javax.persistence.jdbc.password" value="" />
+
+      <property name="eclipselink.ddl-generation" value="create-tables"/>
     </properties>
   </persistence-unit>
 </persistence>

@@ -80,8 +80,8 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
     Properties properties = new Properties();
     properties.put("com.mysql.clusterj.connectstring", "localhost:1186");
     properties.put("com.mysql.clusterj.database", "hudi");
-    properties.put("com.mysql.clusterj.jdbc.password", "root");
-    properties.put("com.mysql.clusterj.jdbc.username", "");
+    properties.put("com.mysql.clusterj.jdbc.username", "root");
+    properties.put("com.mysql.clusterj.jdbc.password", "");
     SessionFactory sessionFactory = ClusterJHelper.getSessionFactory(properties);
     Session session = sessionFactory.getSession();
 

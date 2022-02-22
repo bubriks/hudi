@@ -33,28 +33,26 @@ import java.util.Date;
 public class IndexRecordId implements Serializable {
 
   @Column(name = "record_key")
-  @Basic(optional = false)
-  private byte[] key;
+  private String key;
 
   @Column(name = "commit_ts")
-  @Basic(optional = false)
   @Temporal(TemporalType.TIMESTAMP)
   private Date commitTimestamp;
 
-  public byte[] getKey() {
+  public String getKey() {
     return key;
   }
 
-  public void setKey(byte[] key) {
-    this.key = key;
-  }
-
   public void setKey(String key) {
-    this.key = key.getBytes();
+    this.key = key;
   }
 
   public Date getCommitTime() {
     return commitTimestamp;
+  }
+
+  public String getCommitTimeString() {
+    return HoodieActiveTimeline.COMMIT_FORMATTER.format(commitTimestamp);
   }
 
   public void setCommitTime(Date commitTimestamp) {

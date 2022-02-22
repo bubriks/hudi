@@ -18,13 +18,13 @@
 
 package org.apache.hudi.index.rondb;
 
-import javax.persistence.Basic;
 import javax.persistence.Column;
 import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
+import javax.validation.constraints.NotNull;
 import java.io.Serializable;
 
 @Entity
@@ -36,14 +36,14 @@ import java.io.Serializable;
 public class IndexRecord implements Serializable {
 
   @EmbeddedId
-  IndexRecordId id;
+  IndexRecordId id = new IndexRecordId();
 
   @Column(name = "file_id")
-  @Basic(optional = false)
+  @NotNull
   private String fileId;
 
   @Column(name = "partition_path")
-  @Basic(optional = false)
+  @NotNull
   private String partitionPath;
 
   public String getFileId() {
