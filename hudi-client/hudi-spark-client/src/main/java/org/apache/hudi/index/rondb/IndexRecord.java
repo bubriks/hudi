@@ -24,7 +24,6 @@ import javax.persistence.Entity;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
-import javax.validation.constraints.NotNull;
 import java.io.Serializable;
 
 @Entity
@@ -38,12 +37,11 @@ public class IndexRecord implements Serializable {
   @EmbeddedId
   IndexRecordId id = new IndexRecordId();
 
-  @Column(name = "file_id")
-  @NotNull
+  @Column(name = "file_id", nullable = false)
   private String fileId;
+  //todo split fileid and partition path into separate table
 
-  @Column(name = "partition_path")
-  @NotNull
+  @Column(name = "partition_path", nullable = false)
   private String partitionPath;
 
   public String getFileId() {

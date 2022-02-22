@@ -27,33 +27,6 @@ import java.util.Properties;
 
 public class HoodieRonDBIndexConfig extends DefaultHoodieConfig {
 
-  // storage
-
-  public static final String RONDB_TABLE_PROP = "hoodie.index.rondb.table";
-  public static final String DEFAULT_RONDB_TABLE_PROP = "hudi_index";
-
-  public static final String RONDB_DATABASE_PROP = "hoodie.index.rondb.database";
-  public static final String DEFAULT_RONDB_DATABASE_PROP = "hudi";
-
-  // connection
-
-  public static final String RONDB_URL_PROP = "hoodie.index.rondb.url";
-  public static final String DEFAULT_RONDB_URL_PROP = "jdbc:mysql://localhost:3306";
-
-  // authentication
-
-  public static final String RONDB_AUTH_USERNAME_PROP = "hoodie.index.rondb.auth.username";
-  public static final String DEFAULT_RONDB_AUTH_USERNAME_PROP = "root";
-
-  public static final String RONDB_AUTH_PASSWORD_PROP = "hoodie.index.rondb.auth.password";
-  public static final String DEFAULT_RONDB_AUTH_PASSWORD_PROP = "";
-
-  // CRUD config
-
-  public static final String RONDB_GET_BATCH_SIZE_PROP = "hoodie.index.rondb.get.batch.size";
-  public static final String RONDB_PUT_BATCH_SIZE_PROP = "hoodie.index.rondb.put.batch.size";
-  public static final int DEFAULT_HBASE_BATCH_SIZE = 100;
-
   /**
    * Only applies if index type is RonDB.
    * <p>
@@ -96,41 +69,6 @@ public class HoodieRonDBIndexConfig extends DefaultHoodieConfig {
       return this;
     }
 
-    public HoodieRonDBIndexConfig.Builder rondbTableName(String tableName) {
-      props.setProperty(RONDB_TABLE_PROP, tableName);
-      return this;
-    }
-
-    public HoodieRonDBIndexConfig.Builder rondbDatabaseName(String databaseName) {
-      props.setProperty(RONDB_DATABASE_PROP, databaseName);
-      return this;
-    }
-
-    public HoodieRonDBIndexConfig.Builder rondbUrlName(String url) {
-      props.setProperty(RONDB_URL_PROP, url);
-      return this;
-    }
-
-    public HoodieRonDBIndexConfig.Builder rondbUsername(String username) {
-      props.setProperty(RONDB_AUTH_USERNAME_PROP, username);
-      return this;
-    }
-
-    public HoodieRonDBIndexConfig.Builder rondbPassword(String password) {
-      props.setProperty(RONDB_AUTH_PASSWORD_PROP, password);
-      return this;
-    }
-
-    public HoodieRonDBIndexConfig.Builder rondbIndexGetBatchSize(int getBatchSize) {
-      props.setProperty(RONDB_GET_BATCH_SIZE_PROP, String.valueOf(getBatchSize));
-      return this;
-    }
-
-    public HoodieRonDBIndexConfig.Builder rondbIndexPutBatchSize(int getBatchSize) {
-      props.setProperty(RONDB_PUT_BATCH_SIZE_PROP, String.valueOf(getBatchSize));
-      return this;
-    }
-
     public HoodieRonDBIndexConfig.Builder rondbIndexUpdatePartitionPath(boolean updatePartitionPath) {
       props.setProperty(RONDB_INDEX_UPDATE_PARTITION_PATH, String.valueOf(updatePartitionPath));
       return this;
@@ -143,20 +81,6 @@ public class HoodieRonDBIndexConfig extends DefaultHoodieConfig {
 
     public HoodieRonDBIndexConfig build() {
       HoodieRonDBIndexConfig config = new HoodieRonDBIndexConfig(props);
-      setDefaultOnCondition(props, !props.containsKey(RONDB_TABLE_PROP), RONDB_TABLE_PROP,
-              String.valueOf(DEFAULT_RONDB_TABLE_PROP));
-      setDefaultOnCondition(props, !props.containsKey(RONDB_DATABASE_PROP), RONDB_DATABASE_PROP,
-              String.valueOf(DEFAULT_RONDB_DATABASE_PROP));
-      setDefaultOnCondition(props, !props.containsKey(RONDB_URL_PROP), RONDB_URL_PROP,
-              String.valueOf(DEFAULT_RONDB_URL_PROP));
-      setDefaultOnCondition(props, !props.containsKey(RONDB_AUTH_USERNAME_PROP), RONDB_AUTH_USERNAME_PROP,
-              String.valueOf(DEFAULT_RONDB_AUTH_USERNAME_PROP));
-      setDefaultOnCondition(props, !props.containsKey(RONDB_AUTH_PASSWORD_PROP), RONDB_AUTH_PASSWORD_PROP,
-              String.valueOf(DEFAULT_RONDB_AUTH_PASSWORD_PROP));
-      setDefaultOnCondition(props, !props.containsKey(RONDB_GET_BATCH_SIZE_PROP), RONDB_GET_BATCH_SIZE_PROP,
-              String.valueOf(DEFAULT_HBASE_BATCH_SIZE));
-      setDefaultOnCondition(props, !props.containsKey(RONDB_PUT_BATCH_SIZE_PROP), RONDB_PUT_BATCH_SIZE_PROP,
-              String.valueOf(DEFAULT_HBASE_BATCH_SIZE));
       setDefaultOnCondition(props, !props.containsKey(RONDB_INDEX_UPDATE_PARTITION_PATH), RONDB_INDEX_UPDATE_PARTITION_PATH,
               String.valueOf(DEFAULT_RONDB_INDEX_UPDATE_PARTITION_PATH));
       setDefaultOnCondition(props, !props.containsKey(RONDB_INDEX_ROLLBACK_SYNC), RONDB_INDEX_ROLLBACK_SYNC,

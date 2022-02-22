@@ -20,7 +20,6 @@ package org.apache.hudi.index.rondb;
 
 import org.apache.hudi.common.table.timeline.HoodieActiveTimeline;
 
-import javax.persistence.Basic;
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import javax.persistence.Temporal;
@@ -34,6 +33,8 @@ public class IndexRecordId implements Serializable {
 
   @Column(name = "record_key")
   private String key;
+  //todo change location of these files to common
+  //todo change key to varbinary
 
   @Column(name = "commit_ts")
   @Temporal(TemporalType.TIMESTAMP)

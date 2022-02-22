@@ -705,34 +705,6 @@ public class HoodieWriteConfig extends DefaultHoodieConfig {
     return Boolean.parseBoolean(props.getProperty(HoodieIndexConfig.SIMPLE_INDEX_UPDATE_PARTITION_PATH));
   }
 
-  public String getRonDBTable() {
-    return props.getProperty(HoodieRonDBIndexConfig.RONDB_TABLE_PROP);
-  }
-
-  public String getRonDBDatabase() {
-    return props.getProperty(HoodieRonDBIndexConfig.RONDB_DATABASE_PROP);
-  }
-
-  public String getRonDBUrl() {
-    return props.getProperty(HoodieRonDBIndexConfig.RONDB_URL_PROP);
-  }
-
-  public String getRonDBUsername() {
-    return props.getProperty(HoodieRonDBIndexConfig.RONDB_AUTH_USERNAME_PROP);
-  }
-
-  public String getRonDBPassword() {
-    return props.getProperty(HoodieRonDBIndexConfig.RONDB_AUTH_PASSWORD_PROP);
-  }
-
-  public int getRonDBIndexGetBatchSize() {
-    return Integer.parseInt(props.getProperty(HoodieRonDBIndexConfig.RONDB_GET_BATCH_SIZE_PROP));
-  }
-
-  public int getRonDBIndexPutBatchSize() {
-    return Integer.parseInt(props.getProperty(HoodieRonDBIndexConfig.RONDB_PUT_BATCH_SIZE_PROP));
-  }
-
   public boolean getRonDBIndexUpdatePartitionPath() {
     return Boolean.parseBoolean(props.getProperty(HoodieRonDBIndexConfig.RONDB_INDEX_UPDATE_PARTITION_PATH));
   }
