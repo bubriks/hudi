@@ -18,16 +18,18 @@
 
 package org.apache.hudi.index.rondb;
 
-import javax.persistence.Column;
+import javax.persistence.CascadeType;
 import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 import java.io.Serializable;
 
 @Entity
-@Table(name = "hudi_index")
+@Table(name = "index_record")
 @NamedQueries({
         @NamedQuery(name = "IndexRecord.findByKey", query = "SELECT record FROM IndexRecord record WHERE record.id.key = :key ORDER BY record.id.commitTimestamp DESC"),
         @NamedQuery(name = "IndexRecord.removeByKey", query = "DELETE FROM IndexRecord record WHERE record.id.key = :key"),
@@ -37,26 +39,16 @@ public class IndexRecord implements Serializable {
   @EmbeddedId
   IndexRecordId id = new IndexRecordId();
 
-  @Column(name = "file_id", nullable = false)
-  private String fileId;
-  //todo split fileid and partition path into separate table
+  @JoinColumn(name = "index_record_location_id", referencedColumnName = "id")
+  @ManyToOne(optional = false, cascade = CascadeType.PERSIST)
+  private IndexRecordLocation indexRecordLocation;
 
-  @Column(name = "partition_path", nullable = false)
-  private String partitionPath;
-
-  public String getFileId() {
-    return fileId;
+  public IndexRecordLocation getIndexRecordLocation() {
+    return indexRecordLocation;
   }
 
-  public void setFileId(String fileId) {
-    this.fileId = fileId;
+  public void setIndexRecordLocation(IndexRecordLocation indexRecordLocation) {
+    this.indexRecordLocation = indexRecordLocation;
   }
 
-  public String getPartitionPath() {
-    return partitionPath;
-  }
-
-  public void setPartitionPath(String partitionPath) {
-    this.partitionPath = partitionPath;
-  }
 }

@@ -27,6 +27,7 @@
     <!-- Define the object that should be persisted in the database -->
     <class>org.apache.hudi.index.rondb.IndexRecord</class>
     <class>org.apache.hudi.index.rondb.IndexRecordId</class>
+    <class>org.apache.hudi.index.rondb.IndexRecordLocation</class>
 
     <properties>
       <property name="javax.persistence.jdbc.driver" value="com.mysql.jdbc.Driver" />
