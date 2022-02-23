@@ -33,7 +33,6 @@ public class IndexRecordId implements Serializable {
 
   @Column(name = "record_key")
   private String key;
-  //todo change location of these files to common
   //todo change key to varbinary
 
   @Column(name = "commit_ts")

@@ -35,12 +35,12 @@ import java.util.Collection;
 
 @Entity
 @Table(name = "index_record_location", uniqueConstraints = {
-  @UniqueConstraint(columnNames = {"file_id", "partition_path"})
+        @UniqueConstraint(columnNames = {"file_id", "partition_path"})
 })
 @NamedQueries({
-  @NamedQuery(name = "IndexRecord.findByFileIdAndPartitionPath",
-    query = "SELECT location FROM IndexRecordLocation location WHERE "
-      + "location.fileId = :fileId AND location.partitionPath = :partitionPath")})
+        @NamedQuery(name = "IndexRecord.findByFileIdAndPartitionPath",
+                query = "SELECT location FROM IndexRecordLocation location WHERE "
+                        + "location.fileId = :fileId AND location.partitionPath = :partitionPath")})
 public class IndexRecordLocation implements Serializable {
 
   @Id
