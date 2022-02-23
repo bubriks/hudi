@@ -133,7 +133,7 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
         IndexRecord record;
         try {
           record = entityManager.createNamedQuery("IndexRecord.findByKey", IndexRecord.class)
-                  .setParameter("key", currentRecord.getRecordKey())
+                  .setParameter("key", currentRecord.getRecordKey().getBytes())
                   .setMaxResults(1)
                   .getSingleResult();
         } catch (NoResultException noResultException) {
@@ -168,7 +168,7 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
           currentRecord.seal();
           taggedRecords.add(currentRecord);
           // the key from Result and the key being processed should be same
-          assert (currentRecord.getRecordKey().contentEquals(record.id.getKey()));
+          assert (currentRecord.getRecordKey().contentEquals(record.id.getKeyString()));
         }
       }
       return taggedRecords.iterator();
@@ -222,7 +222,7 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
 
                 // Create and set values for new customer
                 IndexRecord record = new IndexRecord();
-                record.id.setKey(currentRecord.getRecordKey());
+                record.id.setKeyString(currentRecord.getRecordKey());
                 record.id.setCommitTime(loc.get().getInstantTime());
 
                 IndexRecordLocation location;
@@ -243,7 +243,7 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
               } else {
                 // Delete existing index for a deleted record
                 entityManager.createNamedQuery("IndexRecord.removeByKey", IndexRecord.class)
-                        .setParameter("key", currentRecord.getRecordKey()).executeUpdate();
+                        .setParameter("key", currentRecord.getRecordKey().getBytes()).executeUpdate();
               }
             }
           }

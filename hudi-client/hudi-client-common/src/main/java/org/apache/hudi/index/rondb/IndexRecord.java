@@ -39,8 +39,8 @@ public class IndexRecord implements Serializable {
   @EmbeddedId
   IndexRecordId id = new IndexRecordId();
 
-  @JoinColumn(name = "index_record_location_id", referencedColumnName = "id")
-  @ManyToOne(optional = false, cascade = CascadeType.PERSIST)
+  @JoinColumn(name = "index_record_location_id", referencedColumnName = "id", nullable = false)
+  @ManyToOne(cascade = CascadeType.PERSIST)
   private IndexRecordLocation indexRecordLocation;
 
   public IndexRecordLocation getIndexRecordLocation() {

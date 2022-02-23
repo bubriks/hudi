@@ -18,7 +18,6 @@
 
 package org.apache.hudi.index.rondb;
 
-import javax.persistence.Basic;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -45,16 +44,13 @@ public class IndexRecordLocation implements Serializable {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
-  @Basic(optional = false)
   @Column(name = "id")
   private Long id;
 
-  @Column(name = "file_id")
-  @Basic(optional = false)
+  @Column(name = "file_id", nullable = false)
   private String fileId;
 
-  @Column(name = "partition_path")
-  @Basic(optional = false)
+  @Column(name = "partition_path", nullable = false)
   private String partitionPath;
 
   @OneToMany(cascade = CascadeType.ALL, mappedBy = "indexRecordLocation")
