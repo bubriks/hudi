@@ -39,7 +39,7 @@ import java.util.Collection;
        indexes = @Index(name = "record_file_index", columnList = "file_id"))
 @NamedQueries({
         @NamedQuery(name = "RecordFile.getByFileIdAndPartition",
-                query = "SELECT file FROM IndexRecordFile file WHERE file.fileId = :fileId AND file.partition = :partition")})
+                query = "SELECT file FROM IndexRecordFile file WHERE file.fileId = :fileId AND file.recordPartition = :partition")})
 public class IndexRecordFile implements Serializable {
 
   @Id
@@ -52,16 +52,16 @@ public class IndexRecordFile implements Serializable {
 
   @JoinColumn(name = "partition_id", referencedColumnName = "id", nullable = false)
   @ManyToOne(cascade = CascadeType.PERSIST)
-  private IndexRecordPartition partition;
+  private IndexRecordPartition recordPartition;
 
-  @OneToMany(cascade = CascadeType.ALL, mappedBy = "file")
+  @OneToMany(cascade = CascadeType.ALL, mappedBy = "recordFile")
   private Collection<IndexRecord> records;
 
   public IndexRecordFile() {}
 
-  public IndexRecordFile(String fileId, IndexRecordPartition partition) {
+  public IndexRecordFile(String fileId, IndexRecordPartition recordPartition) {
     setFileId(fileId);
-    setPartition(partition);
+    setRecordPartition(recordPartition);
   }
 
   public Long getId() {
@@ -76,12 +76,12 @@ public class IndexRecordFile implements Serializable {
     this.fileId = fileId;
   }
 
-  public IndexRecordPartition getPartition() {
-    return partition;
+  public IndexRecordPartition getRecordPartition() {
+    return recordPartition;
   }
 
-  public void setPartition(IndexRecordPartition partition) {
-    this.partition = partition;
+  public void setRecordPartition(IndexRecordPartition recordPartition) {
+    this.recordPartition = recordPartition;
   }
 
   public Collection<IndexRecord> getRecords() {

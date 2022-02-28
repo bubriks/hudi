@@ -35,7 +35,7 @@ import java.text.ParseException;
        indexes = @Index(name = "record_index", columnList = "key_id"))
 @NamedQueries({
         @NamedQuery(name = "Record.findByKey",
-                query = "SELECT record FROM IndexRecord record WHERE record.key.value = :key ORDER BY record.id.commitTimestamp DESC"),
+                query = "SELECT record FROM IndexRecord record WHERE record.recordKey.key = :key ORDER BY record.id.commitTimestamp DESC"),
         @NamedQuery(name = "Record.removeByTimestamp",
                 query = "DELETE FROM IndexRecord record WHERE record.id.commitTimestamp > :timestamp")})
 public class IndexRecord implements Serializable {
@@ -45,34 +45,34 @@ public class IndexRecord implements Serializable {
 
   @JoinColumn(name = "key_id", referencedColumnName = "id", nullable = false)
   @ManyToOne(cascade = CascadeType.PERSIST)
-  private IndexRecordKey key;
+  private IndexRecordKey recordKey;
 
   @JoinColumn(name = "file_id", referencedColumnName = "id", nullable = false)
   @ManyToOne(cascade = CascadeType.PERSIST)
-  private IndexRecordFile file;
+  private IndexRecordFile recordFile;
 
   public IndexRecord() {}
 
-  public IndexRecord(String commitTimestamp, IndexRecordKey key, IndexRecordFile file)
+  public IndexRecord(String commitTimestamp, IndexRecordKey recordKey, IndexRecordFile recordFile)
       throws ParseException {
     id.setCommitTime(commitTimestamp);
-    setKey(key);
-    setFile(file);
+    setRecordKey(recordKey);
+    setRecordFile(recordFile);
   }
 
-  public IndexRecordKey getKey() {
-    return key;
+  public IndexRecordKey getRecordKey() {
+    return recordKey;
   }
 
-  public void setKey(IndexRecordKey key) {
-    this.key = key;
+  public void setRecordKey(IndexRecordKey recordKey) {
+    this.recordKey = recordKey;
   }
 
-  public IndexRecordFile getFile() {
-    return file;
+  public IndexRecordFile getRecordFile() {
+    return recordFile;
   }
 
-  public void setFile(IndexRecordFile file) {
-    this.file = file;
+  public void setRecordFile(IndexRecordFile recordFile) {
+    this.recordFile = recordFile;
   }
 }

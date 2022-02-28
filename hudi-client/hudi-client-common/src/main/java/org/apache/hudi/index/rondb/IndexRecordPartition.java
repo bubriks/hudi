@@ -37,7 +37,7 @@ import java.util.Collection;
        indexes = @Index(name = "record_partition_index", columnList = "path"))
 @NamedQueries({
         @NamedQuery(name = "RecordPartition.getByPath",
-                query = "SELECT partition FROM IndexRecordPartition partition WHERE partition.path = :path")})
+                query = "SELECT recordPartition FROM IndexRecordPartition recordPartition WHERE recordPartition.path = :path")})
 public class IndexRecordPartition implements Serializable {
 
   @Id
@@ -48,7 +48,7 @@ public class IndexRecordPartition implements Serializable {
   @Column(name = "path", nullable = false)
   private String path;
 
-  @OneToMany(cascade = CascadeType.ALL, mappedBy = "partition")
+  @OneToMany(cascade = CascadeType.ALL, mappedBy = "recordPartition")
   private Collection<IndexRecordFile> files;
 
   public IndexRecordPartition() {}
