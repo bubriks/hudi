@@ -29,14 +29,12 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
-import javax.persistence.UniqueConstraint;
 import java.io.Serializable;
 import java.util.Collection;
 
 @Entity
 @Table(name = "index_record_file",
-        indexes = @Index(name = "record_file_index", columnList = "file_id"),
-        uniqueConstraints = @UniqueConstraint(columnNames = {"file_id"}))
+       indexes = @Index(name = "record_file_index", columnList = "file_id"))
 public class IndexRecordFile implements Serializable {
 
   @Id
@@ -44,7 +42,7 @@ public class IndexRecordFile implements Serializable {
   @Column(name = "id")
   private Long id;
 
-  @Column(name = "file_id", nullable = false)
+  @Column(name = "file_id", nullable = false, unique = true)
   private String fileId;
 
   @JoinColumn(name = "index_record_path_id", referencedColumnName = "id", nullable = false)

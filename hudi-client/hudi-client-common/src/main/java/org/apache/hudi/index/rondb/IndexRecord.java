@@ -21,6 +21,7 @@ package org.apache.hudi.index.rondb;
 import javax.persistence.CascadeType;
 import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
+import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.NamedQueries;
@@ -29,7 +30,8 @@ import javax.persistence.Table;
 import java.io.Serializable;
 
 @Entity
-@Table(name = "index_record")
+@Table(name = "index_record",
+       indexes = @Index(name = "record_index", columnList = "index_record_key_id"))
 @NamedQueries({
         @NamedQuery(name = "IndexRecord.findByKey", query = "SELECT record FROM IndexRecord record WHERE record.recordKey.key = :key ORDER BY record.id.commitTimestamp DESC"),
         @NamedQuery(name = "IndexRecord.removeByTimestamp", query = "DELETE FROM IndexRecord record WHERE record.id.commitTimestamp > :timestamp")})

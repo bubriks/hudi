@@ -29,16 +29,14 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
-import javax.persistence.UniqueConstraint;
 import java.io.Serializable;
 import java.util.Collection;
 
 @Entity
 @Table(name = "index_record_key",
-       indexes = @Index(name = "record_key_index", columnList = "record_key"),
-       uniqueConstraints = @UniqueConstraint(columnNames = {"record_key"}))
+       indexes = @Index(name = "record_key_index", columnList = "record_key"))
 @NamedQueries({
-        @NamedQuery(name = "IndexRecordKey.removeByKey", query = "DELETE FROM IndexRecordKey recordKey WHERE recordKey.key = :key")})
+       @NamedQuery(name = "IndexRecordKey.removeByKey", query = "DELETE FROM IndexRecordKey recordKey WHERE recordKey.key = :key")})
 public class IndexRecordKey implements Serializable {
 
   @Id
@@ -46,7 +44,7 @@ public class IndexRecordKey implements Serializable {
   @Column(name = "id")
   private Long id;
 
-  @Column(name = "record_key", columnDefinition = "VARBINARY(255)")
+  @Column(name = "record_key", columnDefinition = "VARBINARY(255)", nullable = false, unique = true)
   private byte[] key;
 
   @OneToMany(cascade = CascadeType.ALL, mappedBy = "recordKey")

@@ -27,14 +27,12 @@ import javax.persistence.Id;
 import javax.persistence.Index;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
-import javax.persistence.UniqueConstraint;
 import java.io.Serializable;
 import java.util.Collection;
 
 @Entity
 @Table(name = "index_record_partition",
-        indexes = @Index(name = "record_partition_index", columnList = "partition_path"),
-        uniqueConstraints = @UniqueConstraint(columnNames = {"partition_path"}))
+       indexes = @Index(name = "record_partition_index", columnList = "partition_path"))
 public class IndexRecordPartition implements Serializable {
 
   @Id
@@ -42,7 +40,7 @@ public class IndexRecordPartition implements Serializable {
   @Column(name = "id")
   private Long id;
 
-  @Column(name = "partition_path", nullable = false)
+  @Column(name = "partition_path", nullable = false, unique = true)
   private String partitionPath;
 
   @OneToMany(cascade = CascadeType.ALL, mappedBy = "recordPartition")
