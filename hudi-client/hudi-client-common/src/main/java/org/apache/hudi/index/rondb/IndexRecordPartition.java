@@ -34,7 +34,7 @@ import java.util.Collection;
 
 @Entity
 @Table(name = "index_record_partition",
-       indexes = @Index(name = "record_partition_index", columnList = "path"))
+        indexes = @Index(name = "record_partition_index", columnList = "path"))
 @NamedQueries({
         @NamedQuery(name = "RecordPartition.getByPath",
                 query = "SELECT recordPartition FROM IndexRecordPartition recordPartition WHERE recordPartition.path = :path")})

@@ -34,7 +34,7 @@ import java.util.Collection;
 
 @Entity
 @Table(name = "index_record_key",
-       indexes = @Index(name = "record_key_index", columnList = "key"))
+        indexes = @Index(name = "record_key_index", columnList = "key"))
 @NamedQueries({
         @NamedQuery(name = "RecordKey.getByKey",
                 query = "SELECT recordKey FROM IndexRecordKey recordKey WHERE recordKey.key = :key"),
@@ -47,7 +47,7 @@ public class IndexRecordKey implements Serializable {
   @Column(name = "id")
   private Long id;
 
-  @Column(name = "key", columnDefinition = "VARBINARY(255) NOT NULL")
+  @Column(name = "record_key", columnDefinition = "VARBINARY(255) NOT NULL")
   private byte[] key;
 
   @OneToMany(cascade = CascadeType.ALL, mappedBy = "recordKey")
