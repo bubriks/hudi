@@ -18,30 +18,44 @@
 
 package org.apache.hudi.index.rondb;
 
+import org.apache.hudi.common.table.timeline.HoodieActiveTimeline;
+
 import javax.persistence.CascadeType;
-import javax.persistence.EmbeddedId;
+import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
 import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
 import java.io.Serializable;
 import java.text.ParseException;
+import java.util.Date;
 
 @Entity
 @Table(name = "record",
        indexes = @Index(name = "record_index", columnList = "key_id"))
 @NamedQueries({
         @NamedQuery(name = "Record.findByKey",
-                query = "SELECT record FROM IndexRecord record WHERE record.recordKey.key = :key ORDER BY record.id.commitTimestamp DESC"),
+                query = "SELECT record FROM IndexRecord record WHERE record.recordKey.key = :key ORDER BY record.commitTimestamp DESC"),
         @NamedQuery(name = "Record.removeByTimestamp",
-                query = "DELETE FROM IndexRecord record WHERE record.id.commitTimestamp > :timestamp")})
+                query = "DELETE FROM IndexRecord record WHERE record.commitTimestamp > :timestamp")})
 public class IndexRecord implements Serializable {
 
-  @EmbeddedId
-  IndexRecordId id = new IndexRecordId();
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  @Column(name = "id")
+  private Long id;
+
+  @Column(name = "commit_ts")
+  @Temporal(TemporalType.TIMESTAMP)
+  private Date commitTimestamp;
 
   @JoinColumn(name = "key_id", referencedColumnName = "id", nullable = false)
   @ManyToOne(cascade = CascadeType.PERSIST)
@@ -55,9 +69,29 @@ public class IndexRecord implements Serializable {
 
   public IndexRecord(String commitTimestamp, IndexRecordKey recordKey, IndexRecordFile recordFile)
       throws ParseException {
-    id.setCommitTime(commitTimestamp);
+    setCommitTime(commitTimestamp);
     setRecordKey(recordKey);
     setRecordFile(recordFile);
+  }
+
+  public Long getId() {
+    return id;
+  }
+
+  public Date getCommitTime() {
+    return commitTimestamp;
+  }
+
+  public String getCommitTimeString() {
+    return HoodieActiveTimeline.COMMIT_FORMATTER.format(commitTimestamp);
+  }
+
+  public void setCommitTime(Date commitTimestamp) {
+    this.commitTimestamp = commitTimestamp;
+  }
+
+  public void setCommitTime(String commitTimestamp) throws ParseException {
+    this.commitTimestamp = HoodieActiveTimeline.COMMIT_FORMATTER.parse(commitTimestamp);
   }
 
   public IndexRecordKey getRecordKey() {
