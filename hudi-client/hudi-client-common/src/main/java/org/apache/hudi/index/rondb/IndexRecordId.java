@@ -31,7 +31,7 @@ import java.util.Date;
 @Embeddable
 public class IndexRecordId implements Serializable {
 
-  @Column(name = "index_record_key_id", insertable=false, updatable=false)
+  @Column(name = "index_record_key_id", insertable = false, updatable = false)
   private Long keyId;
 
   @Column(name = "commit_ts")

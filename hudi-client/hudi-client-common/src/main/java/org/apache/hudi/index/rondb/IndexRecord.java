@@ -40,7 +40,7 @@ public class IndexRecord implements Serializable {
 
   @JoinColumn(name = "index_record_key_id", referencedColumnName = "id", nullable = false)
   @ManyToOne(cascade = CascadeType.PERSIST)
-  private IndexRecordKey recordKey;
+  private IndexRecordKey recordKey = new IndexRecordKey();
 
   @JoinColumn(name = "index_record_file_id", referencedColumnName = "id", nullable = false)
   @ManyToOne(cascade = CascadeType.PERSIST)
