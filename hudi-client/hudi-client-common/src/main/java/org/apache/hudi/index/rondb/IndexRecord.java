@@ -31,24 +31,34 @@ import java.io.Serializable;
 @Entity
 @Table(name = "index_record")
 @NamedQueries({
-        @NamedQuery(name = "IndexRecord.findByKey", query = "SELECT record FROM IndexRecord record WHERE record.id.key = :key ORDER BY record.id.commitTimestamp DESC"),
-        @NamedQuery(name = "IndexRecord.removeByKey", query = "DELETE FROM IndexRecord record WHERE record.id.key = :key"),
+        @NamedQuery(name = "IndexRecord.findByKey", query = "SELECT record FROM IndexRecord record WHERE record.recordKey.key = :key ORDER BY record.id.commitTimestamp DESC"),
         @NamedQuery(name = "IndexRecord.removeByTimestamp", query = "DELETE FROM IndexRecord record WHERE record.id.commitTimestamp > :timestamp")})
 public class IndexRecord implements Serializable {
 
   @EmbeddedId
   IndexRecordId id = new IndexRecordId();
 
-  @JoinColumn(name = "index_record_location_id", referencedColumnName = "id", nullable = false)
+  @JoinColumn(name = "index_record_key_id", referencedColumnName = "id", nullable = false)
   @ManyToOne(cascade = CascadeType.PERSIST)
-  private IndexRecordLocation indexRecordLocation;
+  private IndexRecordKey recordKey;
 
-  public IndexRecordLocation getIndexRecordLocation() {
-    return indexRecordLocation;
+  @JoinColumn(name = "index_record_file_id", referencedColumnName = "id", nullable = false)
+  @ManyToOne(cascade = CascadeType.PERSIST)
+  private IndexRecordFile recordFile = new IndexRecordFile();
+
+  public IndexRecordKey getRecordKey() {
+    return recordKey;
   }
 
-  public void setIndexRecordLocation(IndexRecordLocation indexRecordLocation) {
-    this.indexRecordLocation = indexRecordLocation;
+  public void setRecordKey(IndexRecordKey recordKey) {
+    this.recordKey = recordKey;
   }
 
+  public IndexRecordFile getRecordFile() {
+    return recordFile;
+  }
+
+  public void setRecordFile(IndexRecordFile recordFile) {
+    this.recordFile = recordFile;
+  }
 }

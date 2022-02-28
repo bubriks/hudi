@@ -24,8 +24,7 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.NamedQueries;
-import javax.persistence.NamedQuery;
+import javax.persistence.Index;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 import javax.persistence.UniqueConstraint;
@@ -33,39 +32,24 @@ import java.io.Serializable;
 import java.util.Collection;
 
 @Entity
-@Table(name = "index_record_location", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"file_id", "partition_path"})
-})
-@NamedQueries({
-        @NamedQuery(name = "IndexRecord.findByFileIdAndPartitionPath",
-                query = "SELECT location FROM IndexRecordLocation location WHERE "
-                        + "location.fileId = :fileId AND location.partitionPath = :partitionPath")})
-public class IndexRecordLocation implements Serializable {
+@Table(name = "index_record_partition",
+        indexes = @Index(name = "record_partition_index", columnList = "partition_path"),
+        uniqueConstraints = @UniqueConstraint(columnNames = {"partition_path"}))
+public class IndexRecordPartition implements Serializable {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   @Column(name = "id")
   private Long id;
 
-  @Column(name = "file_id", nullable = false)
-  private String fileId;
-
   @Column(name = "partition_path", nullable = false)
   private String partitionPath;
 
-  @OneToMany(cascade = CascadeType.ALL, mappedBy = "indexRecordLocation")
-  private Collection<IndexRecord> records;
+  @OneToMany(cascade = CascadeType.ALL, mappedBy = "recordPartition")
+  private Collection<IndexRecordFile> files;
 
   public Long getId() {
     return id;
-  }
-
-  public String getFileId() {
-    return fileId;
-  }
-
-  public void setFileId(String fileId) {
-    this.fileId = fileId;
   }
 
   public String getPartitionPath() {
@@ -76,11 +60,11 @@ public class IndexRecordLocation implements Serializable {
     this.partitionPath = partitionPath;
   }
 
-  public Collection<IndexRecord> getIndexRecords() {
-    return records;
+  public Collection<IndexRecordFile> getFiles() {
+    return files;
   }
 
-  public void setIndexRecords(Collection<IndexRecord> records) {
-    this.records = records;
+  public void setFiles(Collection<IndexRecordFile> files) {
+    this.files = files;
   }
 }

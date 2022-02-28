@@ -148,12 +148,12 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
         }
 
         // check whether to do partition change processing
-        if (updatePartitionPath && !record.getIndexRecordLocation().getPartitionPath().equals(currentRecord.getPartitionPath())) {
+        if (updatePartitionPath && !record.getRecordFile().getRecordPartition().getPartitionPath().equals(currentRecord.getPartitionPath())) {
           // delete partition old data record
-          HoodieRecord emptyRecord = new HoodieRecord(new HoodieKey(currentRecord.getRecordKey(), record.getIndexRecordLocation().getPartitionPath()),
+          HoodieRecord emptyRecord = new HoodieRecord(new HoodieKey(currentRecord.getRecordKey(), record.getRecordFile().getRecordPartition().getPartitionPath()),
                   new EmptyHoodieRecordPayload());
           emptyRecord.unseal();
-          emptyRecord.setCurrentLocation(new HoodieRecordLocation(record.id.getCommitTimeString(), record.getIndexRecordLocation().getFileId()));
+          emptyRecord.setCurrentLocation(new HoodieRecordLocation(record.id.getCommitTimeString(), record.getRecordFile().getFileId()));
           emptyRecord.seal();
           // insert partition new data record
           currentRecord = new HoodieRecord(new HoodieKey(currentRecord.getRecordKey(), currentRecord.getPartitionPath()),
@@ -161,14 +161,14 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
           taggedRecords.add(emptyRecord);
           taggedRecords.add(currentRecord);
         } else {
-          currentRecord = new HoodieRecord(new HoodieKey(currentRecord.getRecordKey(), record.getIndexRecordLocation().getPartitionPath()),
+          currentRecord = new HoodieRecord(new HoodieKey(currentRecord.getRecordKey(), record.getRecordFile().getRecordPartition().getPartitionPath()),
                   currentRecord.getData());
           currentRecord.unseal();
-          currentRecord.setCurrentLocation(new HoodieRecordLocation(record.id.getCommitTimeString(), record.getIndexRecordLocation().getFileId()));
+          currentRecord.setCurrentLocation(new HoodieRecordLocation(record.id.getCommitTimeString(), record.getRecordFile().getFileId()));
           currentRecord.seal();
           taggedRecords.add(currentRecord);
           // the key from Result and the key being processed should be same
-          assert (currentRecord.getRecordKey().contentEquals(record.id.getKeyString()));
+          assert (currentRecord.getRecordKey().contentEquals(record.getRecordKey().getKeyString()));
         }
       }
       return taggedRecords.iterator();
@@ -222,27 +222,15 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
 
                 // Create and set values for new customer
                 IndexRecord record = new IndexRecord();
-                record.id.setKeyString(currentRecord.getRecordKey());
+                record.getRecordKey().setKeyString(currentRecord.getRecordKey());
                 record.id.setCommitTime(loc.get().getInstantTime());
-
-                IndexRecordLocation location;
-                try {
-                  location = entityManager
-                          .createNamedQuery("IndexRecord.findByFileIdAndPartitionPath", IndexRecordLocation.class)
-                          .setParameter("fileId", loc.get().getFileId())
-                          .setParameter("partitionPath", currentRecord.getPartitionPath())
-                          .getSingleResult();
-                } catch (NoResultException noResultException) {
-                  location = new IndexRecordLocation();
-                  location.setFileId(loc.get().getFileId());
-                  location.setPartitionPath(currentRecord.getPartitionPath());
-                }
-                record.setIndexRecordLocation(location);
+                record.getRecordFile().setFileId(loc.get().getFileId());
+                record.getRecordFile().getRecordPartition().setPartitionPath(currentRecord.getPartitionPath());
 
                 entityManager.persist(record);
               } else {
                 // Delete existing index for a deleted record
-                entityManager.createNamedQuery("IndexRecord.removeByKey", IndexRecord.class)
+                entityManager.createNamedQuery("IndexRecordKey.removeByKey", IndexRecordKey.class)
                         .setParameter("key", currentRecord.getRecordKey().getBytes()).executeUpdate();
               }
             }

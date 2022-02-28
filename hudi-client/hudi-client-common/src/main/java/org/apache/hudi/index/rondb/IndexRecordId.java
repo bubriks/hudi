@@ -31,20 +31,12 @@ import java.util.Date;
 @Embeddable
 public class IndexRecordId implements Serializable {
 
-  @Column(name = "record_key", columnDefinition = "VARBINARY(255)")
-  private byte[] key;
+  @Column(name = "index_record_key_id")
+  private Long keyId;
 
   @Column(name = "commit_ts")
   @Temporal(TemporalType.TIMESTAMP)
   private Date commitTimestamp;
-
-  public String getKeyString() {
-    return new String(key);
-  }
-
-  public void setKeyString(String key) {
-    this.key = key.getBytes();
-  }
 
   public Date getCommitTime() {
     return commitTimestamp;
@@ -61,4 +53,5 @@ public class IndexRecordId implements Serializable {
   public void setCommitTime(String commitTimestamp) throws ParseException {
     this.commitTimestamp = HoodieActiveTimeline.COMMIT_FORMATTER.parse(commitTimestamp);
   }
+
 }

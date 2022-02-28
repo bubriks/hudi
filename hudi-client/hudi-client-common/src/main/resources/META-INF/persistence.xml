@@ -26,8 +26,9 @@
     <provider>org.eclipse.persistence.jpa.PersistenceProvider</provider>
     <!-- Define the object that should be persisted in the database -->
     <class>org.apache.hudi.index.rondb.IndexRecord</class>
-    <class>org.apache.hudi.index.rondb.IndexRecordId</class>
-    <class>org.apache.hudi.index.rondb.IndexRecordLocation</class>
+    <class>org.apache.hudi.index.rondb.IndexRecordKey</class>
+    <class>org.apache.hudi.index.rondb.IndexRecordFile</class>
+    <class>org.apache.hudi.index.rondb.IndexRecordPartition</class>
 
     <properties>
       <property name="javax.persistence.jdbc.driver" value="com.mysql.jdbc.Driver" />
