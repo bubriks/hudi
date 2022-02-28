@@ -28,39 +28,51 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 import java.io.Serializable;
+import java.text.ParseException;
 
 @Entity
-@Table(name = "index_record",
-       indexes = @Index(name = "record_index", columnList = "index_record_key_id"))
+@Table(name = "record",
+       indexes = @Index(name = "record_index", columnList = "key_id"))
 @NamedQueries({
-        @NamedQuery(name = "IndexRecord.findByKey", query = "SELECT record FROM IndexRecord record WHERE record.recordKey.key = :key ORDER BY record.id.commitTimestamp DESC"),
-        @NamedQuery(name = "IndexRecord.removeByTimestamp", query = "DELETE FROM IndexRecord record WHERE record.id.commitTimestamp > :timestamp")})
+        @NamedQuery(name = "Record.findByKey",
+                query = "SELECT record FROM IndexRecord record WHERE record.key.value = :key ORDER BY record.id.commitTimestamp DESC"),
+        @NamedQuery(name = "Record.removeByTimestamp",
+                query = "DELETE FROM IndexRecord record WHERE record.id.commitTimestamp > :timestamp")})
 public class IndexRecord implements Serializable {
 
   @EmbeddedId
   IndexRecordId id = new IndexRecordId();
 
-  @JoinColumn(name = "index_record_key_id", referencedColumnName = "id", nullable = false)
+  @JoinColumn(name = "key_id", referencedColumnName = "id", nullable = false)
   @ManyToOne(cascade = CascadeType.PERSIST)
-  private IndexRecordKey recordKey = new IndexRecordKey();
+  private IndexRecordKey key;
 
-  @JoinColumn(name = "index_record_file_id", referencedColumnName = "id", nullable = false)
+  @JoinColumn(name = "file_id", referencedColumnName = "id", nullable = false)
   @ManyToOne(cascade = CascadeType.PERSIST)
-  private IndexRecordFile recordFile = new IndexRecordFile();
+  private IndexRecordFile file;
 
-  public IndexRecordKey getRecordKey() {
-    return recordKey;
+  public IndexRecord() {}
+
+  public IndexRecord(String commitTimestamp, IndexRecordKey key, IndexRecordFile file)
+      throws ParseException {
+    id.setCommitTime(commitTimestamp);
+    setKey(key);
+    setFile(file);
   }
 
-  public void setRecordKey(IndexRecordKey recordKey) {
-    this.recordKey = recordKey;
+  public IndexRecordKey getKey() {
+    return key;
   }
 
-  public IndexRecordFile getRecordFile() {
-    return recordFile;
+  public void setKey(IndexRecordKey key) {
+    this.key = key;
   }
 
-  public void setRecordFile(IndexRecordFile recordFile) {
-    this.recordFile = recordFile;
+  public IndexRecordFile getFile() {
+    return file;
+  }
+
+  public void setFile(IndexRecordFile file) {
+    this.file = file;
   }
 }

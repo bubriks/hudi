@@ -33,10 +33,13 @@ import java.io.Serializable;
 import java.util.Collection;
 
 @Entity
-@Table(name = "index_record_key",
-       indexes = @Index(name = "record_key_index", columnList = "record_key"))
+@Table(name = "record_key",
+       indexes = @Index(name = "record_key_index", columnList = "key"))
 @NamedQueries({
-       @NamedQuery(name = "IndexRecordKey.removeByKey", query = "DELETE FROM IndexRecordKey recordKey WHERE recordKey.key = :key")})
+        @NamedQuery(name = "RecordKey.getByValue",
+                query = "SELECT key FROM IndexRecordKey key WHERE key.value = :value"),
+        @NamedQuery(name = "RecordKey.removeByValue",
+                query = "DELETE FROM IndexRecordKey key WHERE key.value = :value")})
 public class IndexRecordKey implements Serializable {
 
   @Id
@@ -44,22 +47,28 @@ public class IndexRecordKey implements Serializable {
   @Column(name = "id")
   private Long id;
 
-  @Column(name = "record_key", columnDefinition = "VARBINARY(255)", nullable = false, unique = true)
-  private byte[] key;
+  @Column(name = "value", columnDefinition = "VARBINARY(255)", nullable = false)
+  private byte[] value;
 
-  @OneToMany(cascade = CascadeType.ALL, mappedBy = "recordKey")
+  @OneToMany(cascade = CascadeType.ALL, mappedBy = "key")
   private Collection<IndexRecord> records;
+
+  public IndexRecordKey() {}
+
+  public IndexRecordKey(String value) {
+    setValueString(value);
+  }
 
   public Long getId() {
     return id;
   }
 
-  public String getKeyString() {
-    return new String(key);
+  public String getValueString() {
+    return new String(value);
   }
 
-  public void setKeyString(String key) {
-    this.key = key.getBytes();
+  public void setValueString(String value) {
+    this.value = value.getBytes();
   }
 
   public Collection<IndexRecord> getRecords() {

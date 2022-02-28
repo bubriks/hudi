@@ -27,14 +27,19 @@ import javax.persistence.Id;
 import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
+import javax.persistence.NamedQueries;
+import javax.persistence.NamedQuery;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 import java.io.Serializable;
 import java.util.Collection;
 
 @Entity
-@Table(name = "index_record_file",
+@Table(name = "record_file",
        indexes = @Index(name = "record_file_index", columnList = "file_id"))
+@NamedQueries({
+        @NamedQuery(name = "RecordFile.getByFileIdAndPartition",
+                query = "SELECT file FROM IndexRecordFile file WHERE file.fileId = :fileId AND file.partition = :partition")})
 public class IndexRecordFile implements Serializable {
 
   @Id
@@ -42,15 +47,22 @@ public class IndexRecordFile implements Serializable {
   @Column(name = "id")
   private Long id;
 
-  @Column(name = "file_id", nullable = false, unique = true)
+  @Column(name = "file_id", nullable = false, length = 38)
   private String fileId;
 
-  @JoinColumn(name = "index_record_path_id", referencedColumnName = "id", nullable = false)
+  @JoinColumn(name = "partition_id", referencedColumnName = "id", nullable = false)
   @ManyToOne(cascade = CascadeType.PERSIST)
-  private IndexRecordPartition recordPartition = new IndexRecordPartition();
+  private IndexRecordPartition partition;
 
-  @OneToMany(cascade = CascadeType.ALL, mappedBy = "recordFile")
+  @OneToMany(cascade = CascadeType.ALL, mappedBy = "file")
   private Collection<IndexRecord> records;
+
+  public IndexRecordFile() {}
+
+  public IndexRecordFile(String fileId, IndexRecordPartition partition) {
+    setFileId(fileId);
+    setPartition(partition);
+  }
 
   public Long getId() {
     return id;
@@ -64,12 +76,12 @@ public class IndexRecordFile implements Serializable {
     this.fileId = fileId;
   }
 
-  public IndexRecordPartition getRecordPartition() {
-    return recordPartition;
+  public IndexRecordPartition getPartition() {
+    return partition;
   }
 
-  public void setRecordPartition(IndexRecordPartition indexRecordPartition) {
-    this.recordPartition = indexRecordPartition;
+  public void setPartition(IndexRecordPartition partition) {
+    this.partition = partition;
   }
 
   public Collection<IndexRecord> getRecords() {

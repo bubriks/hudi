@@ -31,7 +31,7 @@ import java.util.Date;
 @Embeddable
 public class IndexRecordId implements Serializable {
 
-  @Column(name = "index_record_key_id", insertable = false, updatable = false)
+  @Column(name = "key_id", insertable = false, updatable = false)
   private Long keyId;
 
   @Column(name = "commit_ts")
@@ -53,5 +53,4 @@ public class IndexRecordId implements Serializable {
   public void setCommitTime(String commitTimestamp) throws ParseException {
     this.commitTimestamp = HoodieActiveTimeline.COMMIT_FORMATTER.parse(commitTimestamp);
   }
-
 }

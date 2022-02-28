@@ -25,14 +25,19 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Index;
+import javax.persistence.NamedQueries;
+import javax.persistence.NamedQuery;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 import java.io.Serializable;
 import java.util.Collection;
 
 @Entity
-@Table(name = "index_record_partition",
-       indexes = @Index(name = "record_partition_index", columnList = "partition_path"))
+@Table(name = "record_partition",
+       indexes = @Index(name = "record_partition_index", columnList = "path"))
+@NamedQueries({
+        @NamedQuery(name = "RecordPartition.getByPath",
+                query = "SELECT partition FROM IndexRecordPartition partition WHERE partition.path = :path")})
 public class IndexRecordPartition implements Serializable {
 
   @Id
@@ -40,22 +45,28 @@ public class IndexRecordPartition implements Serializable {
   @Column(name = "id")
   private Long id;
 
-  @Column(name = "partition_path", nullable = false, unique = true)
-  private String partitionPath;
+  @Column(name = "path", nullable = false)
+  private String path;
 
-  @OneToMany(cascade = CascadeType.ALL, mappedBy = "recordPartition")
+  @OneToMany(cascade = CascadeType.ALL, mappedBy = "partition")
   private Collection<IndexRecordFile> files;
+
+  public IndexRecordPartition() {}
+
+  public IndexRecordPartition(String path) {
+    setPath(path);
+  }
 
   public Long getId() {
     return id;
   }
 
-  public String getPartitionPath() {
-    return partitionPath;
+  public String getPath() {
+    return path;
   }
 
-  public void setPartitionPath(String partitionPath) {
-    this.partitionPath = partitionPath;
+  public void setPath(String path) {
+    this.path = path;
   }
 
   public Collection<IndexRecordFile> getFiles() {
