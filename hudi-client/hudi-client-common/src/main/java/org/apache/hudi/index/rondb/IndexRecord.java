@@ -39,8 +39,8 @@ import java.text.ParseException;
 import java.util.Date;
 
 @Entity
-@Table(name = "record",
-       indexes = @Index(name = "record_index", columnList = "key_id"))
+@Table(name = "index_record",
+        indexes = @Index(name = "record_index", columnList = "key_id"))
 @NamedQueries({
         @NamedQuery(name = "Record.findByKey",
                 query = "SELECT record FROM IndexRecord record WHERE record.recordKey.key = :key ORDER BY record.commitTimestamp DESC"),
@@ -68,7 +68,7 @@ public class IndexRecord implements Serializable {
   public IndexRecord() {}
 
   public IndexRecord(String commitTimestamp, IndexRecordKey recordKey, IndexRecordFile recordFile)
-      throws ParseException {
+          throws ParseException {
     setCommitTime(commitTimestamp);
     setRecordKey(recordKey);
     setRecordFile(recordFile);

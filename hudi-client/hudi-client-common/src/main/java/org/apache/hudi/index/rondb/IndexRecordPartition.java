@@ -33,7 +33,7 @@ import java.io.Serializable;
 import java.util.Collection;
 
 @Entity
-@Table(name = "record_partition",
+@Table(name = "index_record_partition",
        indexes = @Index(name = "record_partition_index", columnList = "path"))
 @NamedQueries({
         @NamedQuery(name = "RecordPartition.getByPath",

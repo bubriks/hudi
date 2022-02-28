@@ -33,7 +33,7 @@ import java.io.Serializable;
 import java.util.Collection;
 
 @Entity
-@Table(name = "record_key",
+@Table(name = "index_record_key",
        indexes = @Index(name = "record_key_index", columnList = "key"))
 @NamedQueries({
         @NamedQuery(name = "RecordKey.getByKey",

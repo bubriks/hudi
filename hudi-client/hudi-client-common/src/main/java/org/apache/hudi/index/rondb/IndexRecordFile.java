@@ -35,7 +35,7 @@ import java.io.Serializable;
 import java.util.Collection;
 
 @Entity
-@Table(name = "record_file",
+@Table(name = "index_record_file",
        indexes = @Index(name = "record_file_index", columnList = "file_id"))
 @NamedQueries({
         @NamedQuery(name = "RecordFile.getByFileIdAndPartition",
