@@ -31,7 +31,7 @@ import java.io.Serializable;
 import java.text.ParseException;
 
 @Entity
-@Table(name = "record",
+@Table(name = "index_record",
         indexes = @Index(name = "record_index", columnList = "key_id"))
 @NamedQueries({
         @NamedQuery(name = "Record.findByKey",
