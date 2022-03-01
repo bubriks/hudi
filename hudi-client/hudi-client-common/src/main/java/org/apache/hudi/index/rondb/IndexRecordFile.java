@@ -47,7 +47,7 @@ public class IndexRecordFile implements Serializable {
   @Column(name = "id")
   private Long id;
 
-  @Column(name = "file_id", nullable = false, length = 38)
+  @Column(name = "file_id", nullable = false, length = 38, unique = true)
   private String fileId;
 
   @JoinColumn(name = "partition_id", referencedColumnName = "id", nullable = false)

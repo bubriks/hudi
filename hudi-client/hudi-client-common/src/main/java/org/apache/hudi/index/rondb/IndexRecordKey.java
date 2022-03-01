@@ -47,7 +47,7 @@ public class IndexRecordKey implements Serializable {
   @Column(name = "id")
   private Long id;
 
-  @Column(name = "record_key", columnDefinition = "VARBINARY(255)", nullable = false)
+  @Column(name = "record_key", columnDefinition = "VARBINARY(255)", nullable = false, unique = true)
   private byte[] key;
 
   @OneToMany(cascade = CascadeType.ALL, mappedBy = "recordKey")

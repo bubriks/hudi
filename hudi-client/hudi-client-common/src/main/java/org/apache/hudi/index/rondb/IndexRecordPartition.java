@@ -45,7 +45,7 @@ public class IndexRecordPartition implements Serializable {
   @Column(name = "id")
   private Long id;
 
-  @Column(name = "path", nullable = false)
+  @Column(name = "path", nullable = false, unique = true)
   private String path;
 
   @OneToMany(cascade = CascadeType.ALL, mappedBy = "recordPartition")
