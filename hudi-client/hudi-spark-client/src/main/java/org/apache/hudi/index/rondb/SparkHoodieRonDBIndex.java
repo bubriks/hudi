@@ -141,7 +141,7 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
           continue;
         }
 
-        if (!checkIfValidCommit(metaClient, record.getCommitTimeString())) {
+        if (!checkIfValidCommit(metaClient, record.id.getCommitTimeString())) {
           // if commit is invalid, treat this as a new taggedRecord
           taggedRecords.add(currentRecord);
           continue;
@@ -153,7 +153,7 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
           HoodieRecord emptyRecord = new HoodieRecord(new HoodieKey(currentRecord.getRecordKey(), record.getRecordFile().getRecordPartition().getPath()),
                   new EmptyHoodieRecordPayload());
           emptyRecord.unseal();
-          emptyRecord.setCurrentLocation(new HoodieRecordLocation(record.getCommitTimeString(), record.getRecordFile().getFileId()));
+          emptyRecord.setCurrentLocation(new HoodieRecordLocation(record.id.getCommitTimeString(), record.getRecordFile().getFileId()));
           emptyRecord.seal();
           // insert partition new data record
           currentRecord = new HoodieRecord(new HoodieKey(currentRecord.getRecordKey(), currentRecord.getPartitionPath()),
@@ -164,7 +164,7 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
           currentRecord = new HoodieRecord(new HoodieKey(currentRecord.getRecordKey(), record.getRecordFile().getRecordPartition().getPath()),
                   currentRecord.getData());
           currentRecord.unseal();
-          currentRecord.setCurrentLocation(new HoodieRecordLocation(record.getCommitTimeString(), record.getRecordFile().getFileId()));
+          currentRecord.setCurrentLocation(new HoodieRecordLocation(record.id.getCommitTimeString(), record.getRecordFile().getFileId()));
           currentRecord.seal();
           taggedRecords.add(currentRecord);
           // the key from Result and the key being processed should be same
