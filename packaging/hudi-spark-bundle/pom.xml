@@ -118,8 +118,8 @@
                   <include>commons-codec:commons-codec</include>
 
                   <!-- For RonDB index -->
-                  <include>org.eclipse.persistence:org.eclipse.persistence.jpa</include>
-                  <include>javax.persistence:javax.persistence-api</include>
+                  <include>org.eclipse.persistence:eclipselink</include>
+                  <include>org.eclipse.persistence:javax.persistence</include>
                   <include>com.mysql.ndb:clusterj-rondb</include>
                 </includes>
               </artifactSet>
