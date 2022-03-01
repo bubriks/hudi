@@ -32,7 +32,7 @@ import java.text.ParseException;
 
 @Entity
 @Table(name = "index_record",
-        indexes = @Index(columnList = "key_id", unique = false))
+        indexes = @Index(columnList = "key_id"))
 @NamedQueries({
         @NamedQuery(name = "Record.findByKey",
                 query = "SELECT record FROM IndexRecord record WHERE record.recordKey.key = :key ORDER BY record.id.commitTimestamp DESC"),

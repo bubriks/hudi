@@ -34,7 +34,7 @@ import java.util.Collection;
 
 @Entity
 @Table(name = "index_record_key",
-        indexes = @Index(columnList = "record_key", unique = false))
+        indexes = @Index(columnList = "record_key"))
 @NamedQueries({
         @NamedQuery(name = "RecordKey.getByKey",
                 query = "SELECT recordKey FROM IndexRecordKey recordKey WHERE recordKey.key = :key"),

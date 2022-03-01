@@ -36,7 +36,7 @@ import java.util.Collection;
 
 @Entity
 @Table(name = "index_record_file",
-        indexes = @Index(columnList = "file_id", unique = false))
+        indexes = @Index(columnList = "file_id"))
 @NamedQueries({
         @NamedQuery(name = "RecordFile.getByFileIdAndPartition",
                 query = "SELECT file FROM IndexRecordFile file WHERE file.fileId = :fileId AND file.recordPartition = :partition")})
