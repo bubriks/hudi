@@ -21,7 +21,7 @@
 
   <!-- Define a name used to get an entity manager. Define that you will
   complete transactions with the DB  -->
-  <persistence-unit name="index" transaction-type="RESOURCE_LOCAL">
+  <persistence-unit name="RonDB_PU" transaction-type="RESOURCE_LOCAL">
     <!-- Define the class for Eclipse which implements JPA -->
     <provider>org.eclipse.persistence.jpa.PersistenceProvider</provider>
     <!-- Define the object that should be persisted in the database -->

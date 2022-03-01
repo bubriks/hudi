@@ -65,7 +65,7 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
 
   private void init() {
     if (entityManagerFactory == null || !entityManagerFactory.isOpen()) {
-      entityManagerFactory = Persistence.createEntityManagerFactory("index", config.getProps());
+      entityManagerFactory = Persistence.createEntityManagerFactory("RonDB_PU", config.getProps());
       addShutDownHook();
     }
   }
