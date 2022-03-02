@@ -141,19 +141,24 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
           continue;
         }
 
-        if (!checkIfValidCommit(metaClient, record.id.getCommitTimeString())) {
+        String keyFromResult = record.getRecordKey().getKeyString();
+        String commitTs = record.id.getCommitTimeString();
+        String fileId = record.getRecordFile().getFileId();
+        String partitionPath = record.getRecordFile().getRecordPartition().getPath();
+
+        if (!checkIfValidCommit(metaClient, commitTs)) {
           // if commit is invalid, treat this as a new taggedRecord
           taggedRecords.add(currentRecord);
           continue;
         }
 
         // check whether to do partition change processing
-        if (updatePartitionPath && !record.getRecordFile().getRecordPartition().getPath().equals(currentRecord.getPartitionPath())) {
+        if (updatePartitionPath && !partitionPath.equals(currentRecord.getPartitionPath())) {
           // delete partition old data record
-          HoodieRecord emptyRecord = new HoodieRecord(new HoodieKey(currentRecord.getRecordKey(), record.getRecordFile().getRecordPartition().getPath()),
+          HoodieRecord emptyRecord = new HoodieRecord(new HoodieKey(currentRecord.getRecordKey(), partitionPath),
                   new EmptyHoodieRecordPayload());
           emptyRecord.unseal();
-          emptyRecord.setCurrentLocation(new HoodieRecordLocation(record.id.getCommitTimeString(), record.getRecordFile().getFileId()));
+          emptyRecord.setCurrentLocation(new HoodieRecordLocation(commitTs, fileId));
           emptyRecord.seal();
           // insert partition new data record
           currentRecord = new HoodieRecord(new HoodieKey(currentRecord.getRecordKey(), currentRecord.getPartitionPath()),
@@ -161,14 +166,14 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
           taggedRecords.add(emptyRecord);
           taggedRecords.add(currentRecord);
         } else {
-          currentRecord = new HoodieRecord(new HoodieKey(currentRecord.getRecordKey(), record.getRecordFile().getRecordPartition().getPath()),
+          currentRecord = new HoodieRecord(new HoodieKey(currentRecord.getRecordKey(), partitionPath),
                   currentRecord.getData());
           currentRecord.unseal();
-          currentRecord.setCurrentLocation(new HoodieRecordLocation(record.id.getCommitTimeString(), record.getRecordFile().getFileId()));
+          currentRecord.setCurrentLocation(new HoodieRecordLocation(commitTs, fileId));
           currentRecord.seal();
           taggedRecords.add(currentRecord);
           // the key from Result and the key being processed should be same
-          assert (currentRecord.getRecordKey().contentEquals(record.getRecordKey().getKeyString()));
+          assert (currentRecord.getRecordKey().contentEquals(keyFromResult));
         }
       }
       return taggedRecords.iterator();
@@ -223,7 +228,7 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
                 // Create and set values for new customer
                 IndexRecordKey key = getRecordKey(entityManager, currentRecord.getRecordKey());
                 IndexRecordPartition partition = getRecordPartition(entityManager, currentRecord.getPartitionPath());
-                IndexRecordFile file = getRecordFile(entityManager, currentRecord.getPartitionPath(), partition);
+                IndexRecordFile file = getRecordFile(entityManager, loc.get().getFileId(), partition);
 
                 IndexRecord record = new IndexRecord(loc.get().getInstantTime(), key, file);
 
@@ -240,7 +245,7 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
           Exception we = new Exception("Error updating index for " + writeStatus, e);
           LOG.error(we);
           writeStatus.setGlobalError(we);
-          entityTransaction.rollback();
+          //entityTransaction.rollback();
           throw we;
         }
         writeStatusList.add(writeStatus);
@@ -262,7 +267,6 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
               .getSingleResult();
     } catch (NoResultException noResultException) {
       recordKey = new IndexRecordKey(value);
-      entityManager.persist(recordKey);
     }
     return recordKey;
   }
@@ -276,7 +280,6 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
               .getSingleResult();
     } catch (NoResultException noResultException) {
       recordPartition = new IndexRecordPartition(partitionPath);
-      entityManager.persist(recordPartition);
     }
     return recordPartition;
   }
@@ -286,12 +289,10 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
     try {
       recordFile = entityManager.createNamedQuery("RecordFile.getByFileIdAndPartition", IndexRecordFile.class)
               .setParameter("fileId", fileId)
-              .setParameter("partition", partition)
               .setMaxResults(1)
               .getSingleResult();
     } catch (NoResultException noResultException) {
       recordFile = new IndexRecordFile(fileId, partition);
-      entityManager.persist(recordFile);
     }
     return recordFile;
   }

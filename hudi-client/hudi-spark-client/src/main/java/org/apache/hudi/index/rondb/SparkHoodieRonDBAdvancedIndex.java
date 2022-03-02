@@ -75,10 +75,8 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
     init();
     addShutDownHook();
 
-    System.setProperty("java.library.path", "/srv/hops/mysql-21.04.2/lib/");
-
     Properties properties = new Properties();
-    properties.put("com.mysql.clusterj.connectstring", "localhost:1186");
+    properties.put("com.mysql.clusterj.connectstring", "127.0.0.1:1186");
     properties.put("com.mysql.clusterj.database", "hudi");
     properties.put("com.mysql.clusterj.jdbc.username", "ralfs");
     properties.put("com.mysql.clusterj.jdbc.password", "itsme");
