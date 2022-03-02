@@ -39,7 +39,7 @@ import java.util.Collection;
         indexes = @Index(columnList = "file_id"))
 @NamedQueries({
         @NamedQuery(name = "RecordFile.getByFileIdAndPartition",
-                query = "SELECT file FROM IndexRecordFile file WHERE file.fileId = :fileId AND file.recordPartition = :partition")})
+                query = "SELECT file FROM IndexRecordFile file WHERE file.fileId = :fileId")})
 public class IndexRecordFile implements Serializable {
 
   @Id
