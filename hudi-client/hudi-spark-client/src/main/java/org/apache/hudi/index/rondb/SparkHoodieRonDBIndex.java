@@ -245,8 +245,7 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload> extends SparkH
           Exception we = new Exception("Error updating index for " + writeStatus, e);
           LOG.error(we);
           writeStatus.setGlobalError(we);
-          //entityTransaction.rollback();
-          throw we;
+          entityTransaction.rollback();
         }
         writeStatusList.add(writeStatus);
       }
