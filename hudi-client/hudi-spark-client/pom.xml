@@ -62,8 +62,8 @@
     <!-- MySQL -->
     <dependency>
       <groupId>com.mysql.ndb</groupId>
-      <artifactId>clusterj-rondb</artifactId>
-      <version>21.04.2</version>
+      <artifactId>clusterj-api</artifactId>
+      <version>7.6.10</version>
     </dependency>
 
     <!-- Parquet -->

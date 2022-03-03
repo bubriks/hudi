@@ -68,23 +68,25 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
   private final String fileName = "file_name";
 
   private final String tableName;
+  private final String databaseName;
 
   public SparkHoodieRonDBAdvancedIndex(HoodieWriteConfig config) {
     super(config);
-    this.tableName = "temp";
+    this.tableName = "hudi_record";
+    this.databaseName = "hudi";
     init();
     addShutDownHook();
 
     Properties properties = new Properties();
     properties.put("com.mysql.clusterj.connectstring", "127.0.0.1:1186");
-    properties.put("com.mysql.clusterj.database", "hudi");
-    properties.put("com.mysql.clusterj.jdbc.username", "ralfs");
-    properties.put("com.mysql.clusterj.jdbc.password", "itsme");
+    properties.put("com.mysql.clusterj.database", databaseName);
+    properties.put("com.mysql.clusterj.jdbc.username", "root");
+    properties.put("com.mysql.clusterj.jdbc.password", "");
     SessionFactory sessionFactory = ClusterJHelper.getSessionFactory(properties);
     Session session = sessionFactory.getSession();
 
-    List<HudiIndex> insertInstances = new ArrayList<HudiIndex>();
-    HudiIndex hudiIndex = session.newInstance(HudiIndex.class);
+    List<HudiRecord> insertInstances = new ArrayList<HudiRecord>();
+    HudiRecord hudiIndex = session.newInstance(HudiRecord.class);
     hudiIndex.setRecordKey("1");
     hudiIndex.setCommitTs("2");
     hudiIndex.setPartitionPath("3");
@@ -97,7 +99,7 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
     rondbConnection = getRonDBConnection();
     try {
       setUpEnvironment();
-      rondbConnection.setCatalog("temp_db");
+      rondbConnection.setCatalog(databaseName);
     } catch (SQLException e) {
       throw new HoodieDependentSystemUnavailableException(HoodieDependentSystemUnavailableException.RONDB,
               "problem initializing RonDB: " + e.getMessage());
@@ -107,20 +109,19 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
   private void setUpEnvironment() throws SQLException {
     Statement stmt = rondbConnection.createStatement();
 
-    String query = "CREATE DATABASE IF NOT EXISTS " + "temp_db";
-    stmt.execute(query);
+    String sqlTemplate = "CREATE DATABASE IF NOT EXISTS %1$s; USE %1$s;";
+    String sql = String.format(sqlTemplate, databaseName);
+    stmt.execute(sql);
 
-    query = "USE " + "temp_db";
-    stmt.execute(query);
-
-    query = "CREATE TABLE IF NOT EXISTS " + tableName + " (\n"
-            + "  `" + recordKey + "` varchar(50)  NOT NULL, \n"
-            + "  `" + commitTimestamp + "` varchar(14)  NOT NULL, \n"
-            + "  `" + partition + "` varchar(50) NOT NULL, \n"
-            + "  `" + fileName + "` varchar(50) NOT NULL, \n"
-            + "   PRIMARY KEY (" + recordKey + ") \n"
-            + ") ENGINE=NDBCLUSTER;";
-    stmt.execute(query);
+    sqlTemplate = "CREATE TABLE IF NOT EXISTS %1$s (\n"
+            + "  %2$s VARCHAR(255) NOT NULL, \n"
+            + "  %3$s VARCHAR(255) NOT NULL, \n"
+            + "  %4$s VARCHAR(255) NOT NULL, \n"
+            + "  %5$s VARCHAR(255) NOT NULL, \n"
+            + "  PRIMARY KEY (%2$s, %3$s) \n"
+            + ")";
+    sql = String.format(sqlTemplate, tableName, recordKey, commitTimestamp, partition, fileName);
+    stmt.execute(sql);
 
     stmt.close();
   }
