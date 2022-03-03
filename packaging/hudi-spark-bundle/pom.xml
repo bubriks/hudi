@@ -116,12 +116,6 @@
                   <include>org.apache.curator:curator-client</include>
                   <include>org.apache.curator:curator-recipes</include>
                   <include>commons-codec:commons-codec</include>
-
-                  <!-- For RonDB index -->
-                  <include>mysql:mysql-connector-java</include>
-                  <include>org.eclipse.persistence:eclipselink</include>
-                  <include>org.eclipse.persistence:javax.persistence</include>
-                  <include>com.mysql.ndb:clusterj-rondb</include>
                 </includes>
               </artifactSet>
               <relocations>
