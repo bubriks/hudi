@@ -109,8 +109,12 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
   private void setUpEnvironment() throws SQLException {
     Statement stmt = rondbConnection.createStatement();
 
-    String sqlTemplate = "CREATE DATABASE IF NOT EXISTS %1$s; USE %1$s;";
+    String sqlTemplate = "CREATE DATABASE IF NOT EXISTS %1$s";
     String sql = String.format(sqlTemplate, databaseName);
+    stmt.execute(sql);
+
+    sqlTemplate = "USE %1$s";
+    sql = String.format(sqlTemplate, databaseName);
     stmt.execute(sql);
 
     sqlTemplate = "CREATE TABLE IF NOT EXISTS %1$s (\n"
@@ -119,7 +123,7 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
             + "  %4$s VARCHAR(255) NOT NULL, \n"
             + "  %5$s VARCHAR(255) NOT NULL, \n"
             + "  PRIMARY KEY (%2$s, %3$s) \n"
-            + ")";
+            + ") ENGINE=NDBCLUSTER";
     sql = String.format(sqlTemplate, tableName, recordKey, commitTimestamp, partition, fileName);
     stmt.execute(sql);
 
