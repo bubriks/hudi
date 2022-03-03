@@ -78,10 +78,10 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
     addShutDownHook();
 
     Properties properties = new Properties();
-    properties.put("com.mysql.clusterj.connectstring", "127.0.0.1:1186");
+    properties.put("com.mysql.clusterj.connectstring", "10.0.2.15:1186");
     properties.put("com.mysql.clusterj.database", databaseName);
-    properties.put("com.mysql.clusterj.jdbc.username", "root");
-    properties.put("com.mysql.clusterj.jdbc.password", "");
+    //properties.put("com.mysql.clusterj.jdbc.username", "root");
+    //properties.put("com.mysql.clusterj.jdbc.password", "");
     SessionFactory sessionFactory = ClusterJHelper.getSessionFactory(properties);
     Session session = sessionFactory.getSession();
 
@@ -117,6 +117,7 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
     sql = String.format(sqlTemplate, databaseName);
     stmt.execute(sql);
 
+    //todo work on indexing
     sqlTemplate = "CREATE TABLE IF NOT EXISTS %1$s (\n"
             + "  %2$s VARCHAR(255) NOT NULL, \n"
             + "  %3$s VARCHAR(255) NOT NULL, \n"
