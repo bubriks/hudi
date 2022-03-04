@@ -192,11 +192,11 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
 
         QueryBuilder builder = session.getQueryBuilder();
         QueryDomainType<HudiRecord> domain = builder.createQueryDefinition(HudiRecord.class);
-        domain.where(domain.get(recordKey).equal(domain.param(recordKey)));
+        domain.where(domain.get("recordKey").equal(domain.param("recordKey")));
 
         Query<HudiRecord> query = session.createQuery(domain);
-        query.setParameter(recordKey, currentRecord.getRecordKey().getBytes());
-        query.setOrdering(Query.Ordering.DESCENDING, commitTimestamp);
+        query.setParameter("recordKey", currentRecord.getRecordKey().getBytes());
+        query.setOrdering(Query.Ordering.DESCENDING, "commitTs");
         List<HudiRecord> results = query.getResultList();
 
         HudiRecord record;
@@ -302,10 +302,10 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
               } else {
                 QueryBuilder builder = session.getQueryBuilder();
                 QueryDomainType<HudiRecord> domain = builder.createQueryDefinition(HudiRecord.class);
-                domain.where(domain.get(recordKey).equal(domain.param(recordKey)));
+                domain.where(domain.get("recordKey").equal(domain.param("recordKey")));
 
                 Query<HudiRecord> query = session.createQuery(domain);
-                query.setParameter(recordKey, currentRecord.getRecordKey().getBytes());
+                query.setParameter("recordKey", currentRecord.getRecordKey().getBytes());
                 query.deletePersistentAll();
               }
             }
@@ -349,10 +349,10 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
 
       QueryBuilder builder = session.getQueryBuilder();
       QueryDomainType<HudiRecord> domain = builder.createQueryDefinition(HudiRecord.class);
-      domain.where(domain.get(commitTimestamp).greaterThan(domain.param(commitTimestamp)));
+      domain.where(domain.get("commitTs").greaterThan(domain.param("commitTs")));
 
       Query<HudiRecord> query = session.createQuery(domain);
-      query.setParameter(commitTimestamp, date);
+      query.setParameter("commitTs", date);
       query.deletePersistentAll();
 
       transaction.commit();
