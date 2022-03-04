@@ -81,13 +81,6 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
     this.tableName = "hudi_record";
     this.databaseName = "hudi";
     init();
-    addShutDownHook();
-
-    //Properties properties = new Properties();
-    //properties.put("com.mysql.clusterj.connectstring", "10.0.2.15:1186");
-    //properties.put("com.mysql.clusterj.database", databaseName);
-    //properties.put("com.mysql.clusterj.jdbc.username", "kthfs");
-    //properties.put("com.mysql.clusterj.jdbc.password", "kthfs");
   }
 
   private void init() {
@@ -200,6 +193,7 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
         QueryBuilder builder = session.getQueryBuilder();
         QueryDomainType<HudiRecord> domain = builder.createQueryDefinition(HudiRecord.class);
         domain.where(domain.get(recordKey).equal(domain.param(recordKey)));
+
         Query<HudiRecord> query = session.createQuery(domain);
         query.setParameter(recordKey, currentRecord.getRecordKey().getBytes());
         query.setOrdering(Query.Ordering.DESCENDING, commitTimestamp);
@@ -309,6 +303,7 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
                 QueryBuilder builder = session.getQueryBuilder();
                 QueryDomainType<HudiRecord> domain = builder.createQueryDefinition(HudiRecord.class);
                 domain.where(domain.get(recordKey).equal(domain.param(recordKey)));
+
                 Query<HudiRecord> query = session.createQuery(domain);
                 query.setParameter(recordKey, currentRecord.getRecordKey().getBytes());
                 query.deletePersistentAll();
@@ -355,6 +350,7 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
       QueryBuilder builder = session.getQueryBuilder();
       QueryDomainType<HudiRecord> domain = builder.createQueryDefinition(HudiRecord.class);
       domain.where(domain.get(commitTimestamp).greaterThan(domain.param(commitTimestamp)));
+
       Query<HudiRecord> query = session.createQuery(domain);
       query.setParameter(commitTimestamp, date);
       query.deletePersistentAll();

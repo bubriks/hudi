@@ -31,8 +31,7 @@ import java.io.Serializable;
 import java.text.ParseException;
 
 @Entity
-@Table(name = "index_record",
-        indexes = @Index(columnList = "key_id"))
+@Table(name = "index_record")
 @NamedQueries({
         @NamedQuery(name = "Record.findByKey",
                 query = "SELECT record FROM IndexRecord record WHERE record.recordKey.key = :key ORDER BY record.id.commitTimestamp DESC"),
