@@ -19,20 +19,27 @@
 package org.apache.hudi.index.rondb;
 
 import com.mysql.clusterj.ClusterJHelper;
+import com.mysql.clusterj.Query;
 import com.mysql.clusterj.Session;
 import com.mysql.clusterj.SessionFactory;
+import com.mysql.clusterj.Transaction;
+import com.mysql.clusterj.query.QueryBuilder;
+import com.mysql.clusterj.query.QueryDomainType;
 import org.apache.hudi.client.WriteStatus;
 import org.apache.hudi.client.utils.SparkMemoryUtils;
 import org.apache.hudi.common.engine.HoodieEngineContext;
+import org.apache.hudi.common.model.EmptyHoodieRecordPayload;
 import org.apache.hudi.common.model.HoodieKey;
 import org.apache.hudi.common.model.HoodieRecord;
 import org.apache.hudi.common.model.HoodieRecordLocation;
 import org.apache.hudi.common.model.HoodieRecordPayload;
 import org.apache.hudi.common.table.HoodieTableMetaClient;
+import org.apache.hudi.common.table.timeline.HoodieActiveTimeline;
 import org.apache.hudi.common.table.timeline.HoodieTimeline;
 import org.apache.hudi.common.util.Option;
 import org.apache.hudi.config.HoodieWriteConfig;
 import org.apache.hudi.exception.HoodieDependentSystemUnavailableException;
+import org.apache.hudi.exception.HoodieIndexException;
 import org.apache.hudi.index.SparkHoodieIndex;
 import org.apache.hudi.table.HoodieTable;
 import org.apache.log4j.LogManager;
@@ -43,15 +50,12 @@ import org.joda.time.DateTime;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Properties;
 
 /**
  * Hoodie Index implementation backed by RonDB.
@@ -59,13 +63,15 @@ import java.util.Properties;
 public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extends SparkHoodieIndex<T> {
 
   private static final Logger LOG = LogManager.getLogger(SparkHoodieRonDBAdvancedIndex.class);
-  private static Connection rondbConnection = null;
+  private static SessionFactory entitySessionFactory;
   private static transient Thread shutdownThread;
 
   private final String recordKey = "record_key";
   private final String commitTimestamp = "commit_ts";
   private final String partition = "partition_path";
   private final String fileName = "file_name";
+
+  private final String indexRecordKey = "index_hudi_record_key";
 
   private final String tableName;
   private final String databaseName;
@@ -77,58 +83,48 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
     init();
     addShutDownHook();
 
-    Properties properties = new Properties();
-    properties.put("com.mysql.clusterj.connectstring", "10.0.2.15:1186");
-    properties.put("com.mysql.clusterj.database", databaseName);
-    properties.put("com.mysql.clusterj.jdbc.username", "kthfs");
-    properties.put("com.mysql.clusterj.jdbc.password", "kthfs");
-    SessionFactory sessionFactory = ClusterJHelper.getSessionFactory(properties);
-    Session session = sessionFactory.getSession();
-
-    List<HudiRecord> insertInstances = new ArrayList<HudiRecord>();
-    HudiRecord hudiIndex = session.newInstance(HudiRecord.class);
-    hudiIndex.setRecordKey("1");
-    hudiIndex.setCommitTs("2");
-    hudiIndex.setPartitionPath("3");
-    hudiIndex.setFileName("4");
-    insertInstances.add(hudiIndex);
-    session.makePersistentAll(insertInstances);
+    //Properties properties = new Properties();
+    //properties.put("com.mysql.clusterj.connectstring", "10.0.2.15:1186");
+    //properties.put("com.mysql.clusterj.database", databaseName);
+    //properties.put("com.mysql.clusterj.jdbc.username", "kthfs");
+    //properties.put("com.mysql.clusterj.jdbc.password", "kthfs");
   }
 
   private void init() {
-    rondbConnection = getRonDBConnection();
-    try {
+    if (entitySessionFactory == null || entitySessionFactory.getSession().isClosed()) {
       setUpEnvironment();
-      rondbConnection.setCatalog(databaseName);
-    } catch (SQLException e) {
-      throw new HoodieDependentSystemUnavailableException(HoodieDependentSystemUnavailableException.RONDB,
-              "problem initializing RonDB: " + e.getMessage());
+      entitySessionFactory = ClusterJHelper.getSessionFactory(config.getProps());
+      addShutDownHook();
     }
   }
 
-  private void setUpEnvironment() throws SQLException {
-    Statement stmt = rondbConnection.createStatement();
+  private void setUpEnvironment() {
+    try {
+      Statement stmt = getRonDBConnection().createStatement();
 
-    String sqlTemplate = "CREATE DATABASE IF NOT EXISTS %1$s";
-    String sql = String.format(sqlTemplate, databaseName);
-    stmt.execute(sql);
+      String sqlTemplate = "CREATE DATABASE IF NOT EXISTS %1$s";
+      String sql = String.format(sqlTemplate, databaseName);
+      stmt.execute(sql);
 
-    sqlTemplate = "USE %1$s";
-    sql = String.format(sqlTemplate, databaseName);
-    stmt.execute(sql);
+      sqlTemplate = "USE %1$s";
+      sql = String.format(sqlTemplate, databaseName);
+      stmt.execute(sql);
 
-    //todo work on indexing
-    sqlTemplate = "CREATE TABLE IF NOT EXISTS %1$s (\n"
-            + "  %2$s VARCHAR(255) NOT NULL, \n"
-            + "  %3$s VARCHAR(255) NOT NULL, \n"
-            + "  %4$s VARCHAR(255) NOT NULL, \n"
-            + "  %5$s VARCHAR(255) NOT NULL, \n"
-            + "  PRIMARY KEY (%2$s, %3$s) \n"
-            + ") ENGINE=NDBCLUSTER";
-    sql = String.format(sqlTemplate, tableName, recordKey, commitTimestamp, partition, fileName);
-    stmt.execute(sql);
+      sqlTemplate = "CREATE TABLE IF NOT EXISTS %1$s (\n"
+              + "  %2$s VARBINARY(255) NOT NULL, \n"
+              + "  %3$s TIMESTAMP NOT NULL, \n"
+              + "  %4$s VARCHAR(255) NOT NULL, \n"
+              + "  %5$s VARCHAR(255) NOT NULL, \n"
+              + "  INDEX %6$s (%2$s), \n"
+              + "  PRIMARY KEY (%2$s, %3$s) \n"
+              + ") ENGINE=NDBCLUSTER";
+      sql = String.format(sqlTemplate, tableName, recordKey, commitTimestamp, partition, fileName, indexRecordKey);
+      stmt.execute(sql);
 
-    stmt.close();
+      stmt.close();
+    } catch (SQLException e) {
+      throw new HoodieIndexException(e.getMessage());
+    }
   }
 
   private Connection getRonDBConnection() {
@@ -142,50 +138,20 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
   }
 
   /**
-   * Since we are sharing the RonDBConnection across tasks in a JVM, make sure the RonDBConnection is closed when JVM
+   * Since we are sharing the RonDBConnection across tasks in a JVM, make sure the entitySessionFactory is closed when JVM
    * exits.
    */
   private void addShutDownHook() {
     if (null == shutdownThread) {
       shutdownThread = new Thread(() -> {
         try {
-          rondbConnection.close();
+          entitySessionFactory.close();
         } catch (Exception e) {
           LOG.info("Problem closing RonDB connection");
         }
       });
       Runtime.getRuntime().addShutdownHook(shutdownThread);
     }
-  }
-
-  private PreparedStatement generateGetStatement(String key) throws SQLException {
-    String sql = "SELECT * FROM " + tableName + " WHERE " + recordKey + " = ?";
-
-    PreparedStatement p = rondbConnection.prepareStatement(sql);
-    p.setString(1, key);
-    return p;
-  }
-
-  private PreparedStatement generateUpsertStatement(String key, String partitionPath, String fileId, String commitTs)
-          throws SQLException {
-    String sql = "REPLACE INTO " + tableName + " (" + recordKey + ", " + partition + ", " + fileName + ", " + commitTimestamp + ")"
-            + "VALUES (?, ?, ?, ?)";
-
-    PreparedStatement p = rondbConnection.prepareStatement(sql);
-    p.setString(1, key);
-    p.setString(2, partitionPath);
-    p.setString(3, fileId);
-    p.setString(4, commitTs);
-    return p;
-  }
-
-  private PreparedStatement generateDeleteStatement(String key)
-          throws SQLException {
-    String sql = "DELETE FROM " + tableName + " WHERE " + recordKey + " = ?";
-
-    PreparedStatement p = rondbConnection.prepareStatement(sql);
-    p.setString(1, key);
-    return p;
   }
 
   private boolean checkIfValidCommit(HoodieTableMetaClient metaClient, String commitTs) {
@@ -218,55 +184,60 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
 
     return (partitionNum, hoodieRecordIterator) -> {
 
-      // Grab the global RonDB connection
-      synchronized (SparkHoodieRonDBAdvancedIndex.class) {
-        if (rondbConnection == null || rondbConnection.isClosed()) {
-          rondbConnection = getRonDBConnection();
-          rondbConnection.setCatalog("temp_db");
-        }
+      boolean updatePartitionPath = config.getRonDBIndexUpdatePartitionPath();
+
+      Session session;
+      synchronized (SparkHoodieRonDBIndex.class) {
+        init();
+        session = entitySessionFactory.getSession();
       }
 
       List<HoodieRecord<T>> taggedRecords = new ArrayList<>();
-
-      List<PreparedStatement> statements = new ArrayList<>();
-      List<HoodieRecord> currentBatchOfRecords = new LinkedList<>();
       // Do the tagging.
       while (hoodieRecordIterator.hasNext()) {
-        HoodieRecord rec = hoodieRecordIterator.next();
-        statements.add(generateGetStatement(rec.getRecordKey()));
-        currentBatchOfRecords.add(rec);
-        // iterator till we reach batch size
-        if (hoodieRecordIterator.hasNext()) {
+        HoodieRecord currentRecord = hoodieRecordIterator.next();
+
+        QueryBuilder builder = session.getQueryBuilder();
+        QueryDomainType<HudiRecord> domain = builder.createQueryDefinition(HudiRecord.class);
+        domain.where(domain.get("record_key").equal(domain.param("record_key")));
+        Query<HudiRecord> query = session.createQuery(domain);
+        query.setParameter("record_key",currentRecord.getRecordKey().getBytes());
+        query.setOrdering(Query.Ordering.DESCENDING, "commit_ts");
+        List<HudiRecord> results = query.getResultList();
+
+        HudiRecord record;
+        if (!results.isEmpty()) {
+          record = results.get(0);
+        } else {
+          taggedRecords.add(currentRecord);
           continue;
         }
 
-        // get results for batch from RonDB
-        List<ResultSet> results = executeQuery(statements);
+        String keyFromResult = new String(record.getRecordKey());
+        String commitTs = HoodieActiveTimeline.COMMIT_FORMATTER.format(record.getCommitTs());
+        String fileId = record.getFileName();
+        String partitionPath = record.getPartitionPath();
 
-        // clear statements
-        statements.clear();
+        if (!checkIfValidCommit(metaClient, commitTs)) {
+          // if commit is invalid, treat this as a new taggedRecord
+          taggedRecords.add(currentRecord);
+          continue;
+        }
 
-        for (ResultSet result : results) {
-          // first, attempt to grab location from RonDB
-          HoodieRecord currentRecord = currentBatchOfRecords.remove(0);
-          if (!result.next()) {
-            taggedRecords.add(currentRecord);
-            continue;
-          }
-
-          // get info
-          String keyFromResult = result.getString(recordKey);
-          String commitTs = result.getString(commitTimestamp);
-          String fileId = result.getString(fileName);
-          String partitionPath = result.getString(partition);
-
-          if (!checkIfValidCommit(metaClient, commitTs)) {
-            // if commit is invalid, treat this as a new taggedRecord
-            taggedRecords.add(currentRecord);
-            continue;
-          }
-
-          // tag record
+        // check whether to do partition change processing
+        if (updatePartitionPath && !partitionPath.equals(currentRecord.getPartitionPath())) {
+          // delete partition old data record
+          HoodieRecord emptyRecord = new HoodieRecord(new HoodieKey(currentRecord.getRecordKey(), partitionPath),
+                  new EmptyHoodieRecordPayload());
+          emptyRecord.unseal();
+          emptyRecord.setCurrentLocation(new HoodieRecordLocation(commitTs, fileId));
+          emptyRecord.seal();
+          // insert partition new data record
+          currentRecord = new HoodieRecord(new HoodieKey(currentRecord.getRecordKey(), currentRecord.getPartitionPath()),
+                  currentRecord.getData());
+          taggedRecords.add(emptyRecord);
+          taggedRecords.add(currentRecord);
+        } else {
           currentRecord = new HoodieRecord(new HoodieKey(currentRecord.getRecordKey(), partitionPath),
                   currentRecord.getData());
           currentRecord.unseal();
@@ -281,21 +252,6 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
     };
   }
 
-  private List<ResultSet> executeQuery(List<PreparedStatement> statements) throws SQLException {
-    List<ResultSet> results = new ArrayList();
-    for (PreparedStatement statement : statements) {
-      ResultSet resultSet = statement.executeQuery();
-      results.add(resultSet);
-    }
-    return results;
-  }
-
-  private void execute(List<PreparedStatement> statements) throws SQLException {
-    for (PreparedStatement statement : statements) {
-      statement.execute();
-    }
-  }
-
   @Override
   public JavaRDD<WriteStatus> updateLocation(JavaRDD<WriteStatus> writeStatusRDD, HoodieEngineContext context,
                                              HoodieTable<T, JavaRDD<HoodieRecord<T>>, JavaRDD<HoodieKey>,
@@ -308,72 +264,108 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
 
   private Function2<Integer, Iterator<WriteStatus>, Iterator<WriteStatus>> updateLocationFunction() {
 
-    return (partitionNum, statusIterator) -> {
+    return (partition, statusIterator) -> {
 
       List<WriteStatus> writeStatusList = new ArrayList<>();
 
-      // Grab the global RonDB connection
-      synchronized (SparkHoodieRonDBAdvancedIndex.class) {
-        if (rondbConnection == null || rondbConnection.isClosed()) {
-          rondbConnection = getRonDBConnection();
-          rondbConnection.setCatalog("temp_db");
-        }
+      Session session;
+      synchronized (SparkHoodieRonDBIndex.class) {
+        init();
+        session = entitySessionFactory.getSession();
       }
 
       final long startTimeForPutsTask = DateTime.now().getMillis();
       LOG.info("startTimeForPutsTask for this task: " + startTimeForPutsTask);
 
       while (statusIterator.hasNext()) {
-
         WriteStatus writeStatus = statusIterator.next();
-        List<PreparedStatement> mutations = new ArrayList<>();
+        List<HudiRecord> mutations = new ArrayList<>();
+
+        // Start transaction
+        Transaction transaction = session.currentTransaction();
+        transaction.begin();
 
         try {
           long numOfInserts = writeStatus.getStat().getNumInserts();
           LOG.info("Num of inserts in this WriteStatus: " + numOfInserts);
 
-          for (HoodieRecord rec : writeStatus.getWrittenRecords()) {
-            if (!writeStatus.isErrored(rec.getKey())) {
-              Option<HoodieRecordLocation> loc = rec.getNewLocation();
+          for (HoodieRecord currentRecord : writeStatus.getWrittenRecords()) {
+            if (!writeStatus.isErrored(currentRecord.getKey())) {
+              Option<HoodieRecordLocation> loc = currentRecord.getNewLocation();
               if (loc.isPresent()) {
-                if (rec.getCurrentLocation() != null) {
+                if (currentRecord.getCurrentLocation() != null) {
                   // This is an update, no need to update index
                   continue;
                 }
 
-                PreparedStatement statement = generateUpsertStatement(rec.getRecordKey(), rec.getPartitionPath(),
-                        loc.get().getFileId(), loc.get().getInstantTime());
-                mutations.add(statement);
+                HudiRecord hudiRecord = session.newInstance(HudiRecord.class);
+                hudiRecord.setRecordKey(currentRecord.getRecordKey().getBytes());
+                hudiRecord.setCommitTs(HoodieActiveTimeline.COMMIT_FORMATTER.parse(loc.get().getInstantTime()));
+                hudiRecord.setPartitionPath(currentRecord.getPartitionPath());
+                hudiRecord.setFileName(loc.get().getFileId());
+
+                mutations.add(hudiRecord);
               } else {
-                // Delete existing index for a deleted record
-                PreparedStatement statement = generateDeleteStatement(rec.getRecordKey());
-                mutations.add(statement);
+                QueryBuilder builder = session.getQueryBuilder();
+                QueryDomainType<HudiRecord> domain = builder.createQueryDefinition(HudiRecord.class);
+                domain.where(domain.get("record_key").equal(domain.param("record_key")));
+                Query<HudiRecord> query = session.createQuery(domain);
+                query.setParameter("record_key",currentRecord.getRecordKey().getBytes());
+                query.deletePersistentAll();
               }
             }
           }
-
-          // process puts and deletes, if any
-          rondbConnection.setAutoCommit(false);
-          execute(mutations);
-          rondbConnection.commit();
+          session.makePersistentAll(mutations);
+          transaction.commit();
         } catch (Exception e) {
           Exception we = new Exception("Error updating index for " + writeStatus, e);
           LOG.error(we);
           writeStatus.setGlobalError(we);
+          transaction.rollback();
         }
         writeStatusList.add(writeStatus);
       }
 
       final long endPutsTime = DateTime.now().getMillis();
       LOG.info("rondb puts task time for this task: " + (endPutsTime - startTimeForPutsTask));
-
       return writeStatusList.iterator();
     };
   }
 
   @Override
   public boolean rollbackCommit(String instantTime) {
-    return false;
+    if (!config.getRonDBIndexRollbackSync()) {
+      // Default Rollback in RonDBIndex is managed via method {@link #checkIfValidCommit()}
+      return true;
+    }
+
+    Session session;
+    synchronized (SparkHoodieRonDBIndex.class) {
+      init();
+      session = entitySessionFactory.getSession();
+    }
+
+    // Start transaction
+    Transaction transaction = session.currentTransaction();
+    transaction.begin();
+
+    try {
+      Date date = HoodieActiveTimeline.COMMIT_FORMATTER.parse(instantTime);
+
+      QueryBuilder builder = session.getQueryBuilder();
+      QueryDomainType<HudiRecord> domain = builder.createQueryDefinition(HudiRecord.class);
+      domain.where(domain.get("commit_ts").greaterThan(domain.param("commit_ts")));
+      Query<HudiRecord> query = session.createQuery(domain);
+      query.setParameter("record_key", date);
+      query.deletePersistentAll();
+
+      transaction.commit();
+    } catch (Exception e) {
+      transaction.rollback();
+      LOG.error("rondb index roll back failed", e);
+      return false;
+    }
+    return true;
   }
 
   /**

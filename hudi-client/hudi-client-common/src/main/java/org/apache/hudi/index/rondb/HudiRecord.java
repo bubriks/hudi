@@ -18,23 +18,27 @@
 
 package org.apache.hudi.index.rondb;
 
+import com.mysql.clusterj.annotation.Index;
 import com.mysql.clusterj.annotation.PersistenceCapable;
 import com.mysql.clusterj.annotation.PrimaryKey;
 import com.mysql.clusterj.annotation.Column;
 
+import java.util.Date;
+
 @PersistenceCapable(table = "hudi_record")
+@Index(name="index_hudi_record_key")
 public interface HudiRecord {
 
   @PrimaryKey
   @Column(name = "record_key")
-  String getRecordKey();
+  byte[] getRecordKey();
 
-  void setRecordKey(String recordKey);
+  void setRecordKey(byte[] recordKey);
 
   @Column(name = "commit_ts")
-  String getCommitTs();
+  Date getCommitTs();
 
-  void setCommitTs(String commitTs);
+  void setCommitTs(Date commitTs);
 
   @Column(name = "partition_path")
   String getPartitionPath();
