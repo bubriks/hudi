@@ -300,7 +300,7 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
 
                 HudiRecord hudiRecord = session.newInstance(HudiRecord.class);
                 hudiRecord.setRecordKey(currentRecord.getRecordKey().getBytes());
-                hudiRecord.setCommitTs(HoodieActiveTimeline.COMMIT_FORMATTER.parse(loc.get().getInstantTime()));
+                hudiRecord.setCommitTs(HoodieActiveTimeline.COMMIT_FORMATTER.parse(loc.get().getInstantTime()).getTime());
                 hudiRecord.setPartitionPath(currentRecord.getPartitionPath());
                 hudiRecord.setFileName(loc.get().getFileId());
 
