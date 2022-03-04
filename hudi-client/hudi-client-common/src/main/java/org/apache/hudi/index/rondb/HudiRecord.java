@@ -23,7 +23,6 @@ import com.mysql.clusterj.annotation.PersistenceCapable;
 import com.mysql.clusterj.annotation.PrimaryKey;
 import com.mysql.clusterj.annotation.Column;
 
-
 @PersistenceCapable(table = "hudi_record")
 @Index(name = "index_hudi_record_key")
 public interface HudiRecord {
