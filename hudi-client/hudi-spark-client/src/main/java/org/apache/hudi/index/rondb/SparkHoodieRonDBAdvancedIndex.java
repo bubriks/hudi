@@ -108,8 +108,8 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
               + "  %3$s TIMESTAMP NOT NULL, \n"
               + "  %4$s VARCHAR(255) NOT NULL, \n"
               + "  %5$s VARCHAR(255) NOT NULL, \n"
-              + "  KEY %6$s (%2$s), \n"
-              + "  PRIMARY KEY (%2$s, %3$s DESC) \n"
+              + "  PRIMARY KEY (%2$s, %3$s), \n"
+              + "  KEY %6$s (%2$s) \n"
               + ") ENGINE=NDBCLUSTER";
       sql = String.format(sqlTemplate, tableName, recordKey, commitTimestamp, partition, fileName, indexRecordKey);
       stmt.execute(sql);
