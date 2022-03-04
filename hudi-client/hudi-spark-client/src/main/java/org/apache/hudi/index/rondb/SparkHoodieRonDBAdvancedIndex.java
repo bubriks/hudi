@@ -71,7 +71,7 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
   private final String partition = "partition_path";
   private final String fileName = "file_name";
 
-  private final String indexRecordKey = "index_hudi_record_key";
+  private final String indexRecordKey = "idx_record_key";
 
   private final String tableName;
   private final String databaseName;

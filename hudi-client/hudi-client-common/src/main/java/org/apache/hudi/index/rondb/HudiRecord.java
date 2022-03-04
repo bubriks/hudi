@@ -24,10 +24,10 @@ import com.mysql.clusterj.annotation.PrimaryKey;
 import com.mysql.clusterj.annotation.Column;
 
 @PersistenceCapable(table = "hudi_record")
-@Index(name = "index_hudi_record_key")
 public interface HudiRecord {
 
   @PrimaryKey
+  @Index(name = "idx_record_key")
   @Column(name = "record_key")
   byte[] getRecordKey();
 
