@@ -26,7 +26,7 @@ import com.mysql.clusterj.annotation.Column;
 import java.util.Date;
 
 @PersistenceCapable(table = "hudi_record")
-@Index(name="index_hudi_record_key")
+@Index(name = "index_hudi_record_key")
 public interface HudiRecord {
 
   @PrimaryKey
