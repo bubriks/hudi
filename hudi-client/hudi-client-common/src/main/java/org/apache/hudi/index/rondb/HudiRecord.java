@@ -33,6 +33,7 @@ public interface HudiRecord {
 
   void setRecordKey(byte[] recordKey);
 
+  @PrimaryKey
   @Column(name = "commit_ts")
   long getCommitTs();
 
