@@ -109,7 +109,7 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
               + "  %4$s VARCHAR(255) NOT NULL, \n"
               + "  %5$s VARCHAR(255) NOT NULL, \n"
               + "  PRIMARY KEY (%2$s, %3$s), \n"
-              + "  KEY %6$s (%2$s) \n"
+              + "  INDEX %6$s (%2$s) \n"
               + ") ENGINE=NDBCLUSTER";
       sql = String.format(sqlTemplate, tableName, recordKey, commitTimestamp, partition, fileName, indexRecordKey);
       stmt.execute(sql);
@@ -196,7 +196,7 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
 
         Query<HudiRecord> query = session.createQuery(domain);
         query.setParameter("recordKey", currentRecord.getRecordKey().getBytes());
-        query.setOrdering(Query.Ordering.DESCENDING, "commitTs");
+        query.setOrdering(Query.Ordering.DESCENDING, "recordKey", "commitTs");
         query.setLimits(0, 1);
         List<HudiRecord> results = query.getResultList();
 
