@@ -104,6 +104,6 @@ public abstract class HoodieIndex<T extends HoodieRecordPayload, I, K, O> implem
   }
 
   public enum IndexType {
-    HBASE, INMEMORY, BLOOM, GLOBAL_BLOOM, SIMPLE, GLOBAL_SIMPLE
+    RONDB, RONDB_ADVANCED, HBASE, INMEMORY, BLOOM, GLOBAL_BLOOM, SIMPLE, GLOBAL_SIMPLE
   }
 }

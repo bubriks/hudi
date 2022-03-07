@@ -59,6 +59,13 @@
       <scope>provided</scope>
     </dependency>
 
+    <!-- MySQL -->
+    <dependency>
+      <groupId>com.mysql.ndb</groupId>
+      <artifactId>clusterj-api</artifactId>
+      <version>7.6.10</version>
+    </dependency>
+
     <!-- Parquet -->
     <dependency>
       <groupId>org.apache.parquet</groupId>

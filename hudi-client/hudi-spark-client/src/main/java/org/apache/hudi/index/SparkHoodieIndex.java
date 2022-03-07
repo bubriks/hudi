@@ -32,6 +32,8 @@ import org.apache.hudi.exception.HoodieIndexException;
 import org.apache.hudi.index.bloom.SparkHoodieBloomIndex;
 import org.apache.hudi.index.bloom.SparkHoodieGlobalBloomIndex;
 import org.apache.hudi.index.hbase.SparkHoodieHBaseIndex;
+import org.apache.hudi.index.rondb.SparkHoodieRonDBAdvancedIndex;
+import org.apache.hudi.index.rondb.SparkHoodieRonDBIndex;
 import org.apache.hudi.index.simple.SparkHoodieGlobalSimpleIndex;
 import org.apache.hudi.index.simple.SparkHoodieSimpleIndex;
 import org.apache.hudi.table.HoodieTable;
@@ -54,6 +56,10 @@ public abstract class SparkHoodieIndex<T extends HoodieRecordPayload> extends Ho
       return (SparkHoodieIndex) instance;
     }
     switch (config.getIndexType()) {
+      case RONDB:
+        return new SparkHoodieRonDBIndex<>(config);
+      case RONDB_ADVANCED:
+        return new SparkHoodieRonDBAdvancedIndex<>(config);
       case HBASE:
         return new SparkHoodieHBaseIndex<>(config);
       case INMEMORY:
