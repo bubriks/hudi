@@ -34,7 +34,6 @@ import org.apache.hudi.common.model.HoodieRecord;
 import org.apache.hudi.common.model.HoodieRecordLocation;
 import org.apache.hudi.common.model.HoodieRecordPayload;
 import org.apache.hudi.common.table.HoodieTableMetaClient;
-import org.apache.hudi.common.table.timeline.HoodieActiveTimeline;
 import org.apache.hudi.common.table.timeline.HoodieTimeline;
 import org.apache.hudi.common.util.Option;
 import org.apache.hudi.config.HoodieWriteConfig;
@@ -53,7 +52,6 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 
@@ -105,7 +103,7 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
 
       sqlTemplate = "CREATE TABLE IF NOT EXISTS %1$s (\n"
               + "  %2$s VARBINARY(255) NOT NULL, \n"
-              + "  %3$s TIMESTAMP NOT NULL, \n"
+              + "  %3$s BIGINT NOT NULL, \n"
               + "  %4$s VARCHAR(255) NOT NULL, \n"
               + "  %5$s VARCHAR(255) NOT NULL, \n"
               + "  PRIMARY KEY (%2$s, %3$s), \n"
@@ -209,7 +207,7 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
         }
 
         String keyFromResult = new String(record.getRecordKey());
-        String commitTs = HoodieActiveTimeline.COMMIT_FORMATTER.format(record.getCommitTs());
+        String commitTs = Long.toString(record.getCommitTs());
         String fileId = record.getFileName();
         String partitionPath = record.getPartitionPath();
 
@@ -295,7 +293,7 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
 
                 HudiRecord hudiRecord = session.newInstance(HudiRecord.class);
                 hudiRecord.setRecordKey(currentRecord.getRecordKey().getBytes());
-                hudiRecord.setCommitTs(HoodieActiveTimeline.COMMIT_FORMATTER.parse(loc.get().getInstantTime()).getTime());
+                hudiRecord.setCommitTs(Long.parseLong(loc.get().getInstantTime()));
                 hudiRecord.setPartitionPath(currentRecord.getPartitionPath());
                 hudiRecord.setFileName(loc.get().getFileId());
 
@@ -346,14 +344,12 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload> extend
     transaction.begin();
 
     try {
-      Date date = HoodieActiveTimeline.COMMIT_FORMATTER.parse(instantTime);
-
       QueryBuilder builder = session.getQueryBuilder();
       QueryDomainType<HudiRecord> domain = builder.createQueryDefinition(HudiRecord.class);
       domain.where(domain.get("commitTs").greaterThan(domain.param("commitTs")));
 
       Query<HudiRecord> query = session.createQuery(domain);
-      query.setParameter("commitTs", date);
+      query.setParameter("commitTs", Long.parseLong(instantTime));
       query.deletePersistentAll();
 
       transaction.commit();
