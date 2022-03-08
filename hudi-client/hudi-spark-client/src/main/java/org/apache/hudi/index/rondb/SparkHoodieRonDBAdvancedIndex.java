@@ -20,6 +20,7 @@ package org.apache.hudi.index.rondb;
 
 import org.apache.hudi.client.WriteStatus;
 import org.apache.hudi.client.utils.SparkMemoryUtils;
+import org.apache.hudi.common.config.TypedProperties;
 import org.apache.hudi.common.data.HoodieData;
 import org.apache.hudi.common.engine.HoodieEngineContext;
 import org.apache.hudi.common.model.EmptyHoodieRecordPayload;
@@ -75,14 +76,24 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload>
 
   private final String indexRecordKey = "idx_record_key";
 
-  private final String tableName;
+  private final String tableName = "hudi_record";
   private final String databaseName;
 
   public SparkHoodieRonDBAdvancedIndex(HoodieWriteConfig config) {
     super(config);
-    this.tableName = "hudi_record";
-    this.databaseName = "hudi";
+    addPropertyIfNotExist(config.getProps(), "url","jdbc:mysql://localhost:3306/hudi");
+    addPropertyIfNotExist(config.getProps(), "createDatabaseIfNotExist","true");
+    addPropertyIfNotExist(config.getProps(), "user","root");
+    addPropertyIfNotExist(config.getProps(), "password","");
+
+    addPropertyIfNotExist(config.getProps(), "com.mysql.clusterj.connectstring","10.0.2.15:1186");
+    addPropertyIfNotExist(config.getProps(), "com.mysql.clusterj.database","hudi");
+    this.databaseName = config.getProps().getString("com.mysql.clusterj.database");
     init();
+  }
+
+  private void addPropertyIfNotExist(TypedProperties properties, String key, String value) {
+    properties.setProperty(key, properties.getProperty(key, value));
   }
 
   private void init() {
@@ -97,15 +108,7 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload>
     try {
       Statement stmt = getRonDBConnection().createStatement();
 
-      String sqlTemplate = "CREATE DATABASE IF NOT EXISTS %1$s";
-      String sql = String.format(sqlTemplate, databaseName);
-      stmt.execute(sql);
-
-      sqlTemplate = "USE %1$s";
-      sql = String.format(sqlTemplate, databaseName);
-      stmt.execute(sql);
-
-      sqlTemplate = "CREATE TABLE IF NOT EXISTS %1$s (\n"
+      String sqlTemplate = "CREATE TABLE IF NOT EXISTS %1$s (\n"
           + "  %2$s VARBINARY(255) NOT NULL, \n"
           + "  %3$s BIGINT NOT NULL, \n"
           + "  %4$s VARCHAR(255) NOT NULL, \n"
@@ -113,7 +116,7 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload>
           + "  PRIMARY KEY (%2$s, %3$s), \n"
           + "  INDEX %6$s (%2$s) \n"
           + ") ENGINE=NDBCLUSTER";
-      sql = String.format(sqlTemplate, tableName, recordKey, commitTimestamp, partition, fileName, indexRecordKey);
+      String sql = String.format(sqlTemplate, tableName, recordKey, commitTimestamp, partition, fileName, indexRecordKey);
       stmt.execute(sql);
 
       stmt.close();
@@ -125,10 +128,10 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload>
   private Connection getRonDBConnection() {
     try {
       DriverManager.registerDriver(new com.mysql.jdbc.Driver());
-      return DriverManager.getConnection("jdbc:mysql://localhost:3306", "root", "");
+      return DriverManager.getConnection(config.getProps().getString("url"), config.getProps());
     } catch (SQLException e) {
       throw new HoodieDependentSystemUnavailableException(HoodieDependentSystemUnavailableException.RONDB,
-          "jdbc:mysql://localhost:3306", e);
+          "url = " + config.getProps().getString("url"), e);
     }
   }
 
