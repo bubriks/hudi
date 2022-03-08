@@ -1427,11 +1427,11 @@ public class HoodieWriteConfig extends HoodieConfig {
   }
 
   public boolean getRonDBIndexUpdatePartitionPath() {
-    return Boolean.parseBoolean(props.getProperty(HoodieRonDBIndexConfig.RONDB_INDEX_UPDATE_PARTITION_PATH));
+    return getBoolean(HoodieRonDBIndexConfig.UPDATE_PARTITION_PATH_ENABLE);
   }
 
-  public Boolean getRonDBIndexRollbackSync() {
-    return Boolean.parseBoolean(props.getProperty(HoodieRonDBIndexConfig.RONDB_INDEX_ROLLBACK_SYNC));
+  public boolean getRonDBIndexRollbackSync() {
+    return getBoolean(HoodieRonDBIndexConfig.ROLLBACK_SYNC_ENABLE);
   }
 
   /**
