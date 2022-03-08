@@ -231,6 +231,23 @@
       <scope>test</scope>
     </dependency>
 
+    <!-- RonDB -->
+    <dependency>
+      <groupId>mysql</groupId>
+      <artifactId>mysql-connector-java</artifactId>
+      <version>8.0.28</version>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.persistence</groupId>
+      <artifactId>eclipselink</artifactId>
+      <version>2.5.2</version>
+    </dependency>
+    <dependency>
+      <groupId>com.mysql.ndb</groupId>
+      <artifactId>clusterj-api</artifactId>
+      <version>7.6.10</version>
+    </dependency>
+
   </dependencies>
 
   <build>

@@ -29,6 +29,8 @@ import org.apache.hudi.index.bloom.HoodieBloomIndex;
 import org.apache.hudi.index.bloom.HoodieGlobalBloomIndex;
 import org.apache.hudi.index.bloom.SparkHoodieBloomIndexHelper;
 import org.apache.hudi.index.hbase.SparkHoodieHBaseIndex;
+import org.apache.hudi.index.rondb.SparkHoodieRonDBAdvancedIndex;
+import org.apache.hudi.index.rondb.SparkHoodieRonDBIndex;
 import org.apache.hudi.index.inmemory.HoodieInMemoryHashIndex;
 import org.apache.hudi.index.simple.HoodieGlobalSimpleIndex;
 import org.apache.hudi.index.simple.HoodieSimpleIndex;
@@ -51,6 +53,10 @@ public final class SparkHoodieIndexFactory {
       return (HoodieIndex) instance;
     }
     switch (config.getIndexType()) {
+      case RONDB:
+        return new SparkHoodieRonDBIndex<>(config);
+      case RONDB_ADVANCED:
+        return new SparkHoodieRonDBAdvancedIndex<>(config);
       case HBASE:
         return new SparkHoodieHBaseIndex<>(config);
       case INMEMORY:

@@ -16,23 +16,36 @@
  * limitations under the License.
  */
 
-package org.apache.hudi.exception;
+package org.apache.hudi.index.rondb;
 
-/**
- * <p>
- * Exception thrown when dependent system is not available.
- * </p>
- */
-public class HoodieDependentSystemUnavailableException extends HoodieException {
+import com.mysql.clusterj.annotation.Index;
+import com.mysql.clusterj.annotation.PersistenceCapable;
+import com.mysql.clusterj.annotation.PrimaryKey;
+import com.mysql.clusterj.annotation.Column;
 
-  public static final String HBASE = "HBASE";
-  public static final String RONDB = "RONDB";
+@PersistenceCapable(table = "hudi_record")
+public interface HudiRecord {
 
-  public HoodieDependentSystemUnavailableException(String system, String connectURL, Throwable t) {
-    super(getLogMessage(system, connectURL), t);
-  }
+  @PrimaryKey
+  @Index(name = "idx_record_key")
+  @Column(name = "record_key")
+  byte[] getRecordKey();
 
-  private static String getLogMessage(String system, String connectURL) {
-    return "System " + system + " unavailable. Tried to connect to " + connectURL;
-  }
+  void setRecordKey(byte[] recordKey);
+
+  @PrimaryKey
+  @Column(name = "commit_ts")
+  long getCommitTs();
+
+  void setCommitTs(long commitTs);
+
+  @Column(name = "partition_path")
+  String getPartitionPath();
+
+  void setPartitionPath(String partitionPath);
+
+  @Column(name = "file_name")
+  String getFileName();
+
+  void setFileName(String fileName);
 }
