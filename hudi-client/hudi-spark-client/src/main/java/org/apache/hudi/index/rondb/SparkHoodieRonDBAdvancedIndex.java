@@ -77,7 +77,6 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload>
   private final String indexRecordKey = "idx_record_key";
 
   private final String tableName = "hudi_record";
-  private final String databaseName;
 
   public SparkHoodieRonDBAdvancedIndex(HoodieWriteConfig config) {
     super(config);
@@ -88,7 +87,6 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload>
 
     addPropertyIfNotExist(config.getProps(), "com.mysql.clusterj.connectstring","10.0.2.15:1186");
     addPropertyIfNotExist(config.getProps(), "com.mysql.clusterj.database","hudi");
-    this.databaseName = config.getProps().getString("com.mysql.clusterj.database");
     init();
   }
 
