@@ -49,6 +49,27 @@ public class HoodieRonDBIndexConfig extends HoodieConfig {
       .withDocumentation("When set to true, the rollback method will delete the last failed task index. "
           + "The default value is false. Because deleting the index will add extra load on the RonDB cluster for each rollback");
 
+  /**
+   * @deprecated Use {@link #UPDATE_PARTITION_PATH_ENABLE} and its methods instead
+   */
+  @Deprecated
+  public static final String RONDB_INDEX_UPDATE_PARTITION_PATH = UPDATE_PARTITION_PATH_ENABLE.key();
+  /**
+   * @deprecated Use {@link #UPDATE_PARTITION_PATH_ENABLE} and its methods instead
+   */
+  @Deprecated
+  public static final Boolean DEFAULT_RONDB_INDEX_UPDATE_PARTITION_PATH = UPDATE_PARTITION_PATH_ENABLE.defaultValue();
+  /**
+   * @deprecated Use {@link #ROLLBACK_SYNC_ENABLE} and its methods instead
+   */
+  @Deprecated
+  public static final String RONDB_INDEX_ROLLBACK_SYNC = ROLLBACK_SYNC_ENABLE.key();
+  /**
+   * @deprecated Use {@link #ROLLBACK_SYNC_ENABLE} and its methods instead
+   */
+  @Deprecated
+  public static final Boolean DEFAULT_RONDB_INDEX_ROLLBACK_SYNC = ROLLBACK_SYNC_ENABLE.defaultValue();
+
   private HoodieRonDBIndexConfig() {
     super();
   }
