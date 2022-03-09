@@ -20,7 +20,6 @@ package org.apache.hudi.index.rondb;
 
 import org.apache.hudi.client.WriteStatus;
 import org.apache.hudi.client.utils.SparkMemoryUtils;
-import org.apache.hudi.common.config.TypedProperties;
 import org.apache.hudi.common.data.HoodieData;
 import org.apache.hudi.common.engine.HoodieEngineContext;
 import org.apache.hudi.common.model.EmptyHoodieRecordPayload;
@@ -80,24 +79,13 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload>
 
   public SparkHoodieRonDBAdvancedIndex(HoodieWriteConfig config) {
     super(config);
-    addPropertyIfNotExist(config.getProps(), "url","jdbc:mysql://localhost:3306/hudi");
-    addPropertyIfNotExist(config.getProps(), "createDatabaseIfNotExist","true");
-    addPropertyIfNotExist(config.getProps(), "user","root");
-    addPropertyIfNotExist(config.getProps(), "password","");
-
-    addPropertyIfNotExist(config.getProps(), "com.mysql.clusterj.connectstring","10.0.2.15:1186");
-    addPropertyIfNotExist(config.getProps(), "com.mysql.clusterj.database","hudi");
     init();
-  }
-
-  private void addPropertyIfNotExist(TypedProperties properties, String key, String value) {
-    properties.setProperty(key, properties.getProperty(key, value));
   }
 
   private void init() {
     if (entitySessionFactory == null || entitySessionFactory.getSession().isClosed()) {
       setUpEnvironment();
-      entitySessionFactory = ClusterJHelper.getSessionFactory(config.getProps());
+      entitySessionFactory = ClusterJHelper.getSessionFactory(config.getRonDBIndexCLUSTERJ());
       addShutDownHook();
     }
   }
@@ -126,10 +114,10 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload>
   private Connection getRonDBConnection() {
     try {
       DriverManager.registerDriver(new com.mysql.jdbc.Driver());
-      return DriverManager.getConnection(config.getProps().getString("url"), config.getProps());
+      return DriverManager.getConnection(config.getRonDBIndexJDBC().getProperty("url"), config.getRonDBIndexJDBC());
     } catch (SQLException e) {
       throw new HoodieDependentSystemUnavailableException(HoodieDependentSystemUnavailableException.RONDB,
-          "url = " + config.getProps().getString("url"), e);
+          "url = " + config.getRonDBIndexJDBC().getProperty("url"), e);
     }
   }
 

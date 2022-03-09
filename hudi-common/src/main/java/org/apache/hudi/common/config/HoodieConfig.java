@@ -18,10 +18,13 @@
 
 package org.apache.hudi.common.config;
 
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hudi.common.util.Option;
 import org.apache.hudi.common.util.ReflectionUtils;
 import org.apache.hudi.exception.HoodieException;
+import org.apache.hudi.exception.HoodieIndexException;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
@@ -29,6 +32,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -148,6 +152,22 @@ public class HoodieConfig implements Serializable {
     Option<Object> rawValue = getRawValue(configProperty);
     return rawValue.map(v -> Boolean.parseBoolean(v.toString()))
             .orElseGet(() -> Boolean.parseBoolean(configProperty.defaultValue().toString()));
+  }
+
+  public <T> Properties getPropertiesOrDefault(ConfigProperty<T> configProperty) {
+    Option<Object> rawValue = getRawValue(configProperty);
+    return rawValue.map(v -> {
+      try {
+        Properties properties = new Properties();
+        Map map = new ObjectMapper()
+            .configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true)
+            .readValue(v.toString(), Map.class);
+        properties.putAll(map);
+        return properties;
+      } catch (Exception e) {
+        throw new HoodieIndexException("Bad properties: " + v, e);
+      }
+    }).orElseGet(() -> (Properties) configProperty.defaultValue());
   }
 
   public <T> Long getLong(ConfigProperty<T> configProperty) {

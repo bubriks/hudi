@@ -1434,6 +1434,18 @@ public class HoodieWriteConfig extends HoodieConfig {
     return getBooleanOrDefault(HoodieRonDBIndexConfig.ROLLBACK_SYNC_ENABLE);
   }
 
+  public Properties getRonDBIndexJPA() {
+    return getPropertiesOrDefault(HoodieRonDBIndexConfig.JPA);
+  }
+
+  public Properties getRonDBIndexJDBC() {
+    return getPropertiesOrDefault(HoodieRonDBIndexConfig.JDBC);
+  }
+
+  public Properties getRonDBIndexCLUSTERJ() {
+    return getPropertiesOrDefault(HoodieRonDBIndexConfig.CLUSTERJ);
+  }
+
   /**
    * storage properties.
    */

@@ -44,31 +44,51 @@ public class HoodieRonDBIndexConfig extends HoodieConfig {
           + "and will insert it as new record in new partition.");
 
   public static final ConfigProperty<Boolean> ROLLBACK_SYNC_ENABLE = ConfigProperty
-      .key("hoodie.rondb.hbase.rollback.sync")
+      .key("hoodie.rondb.index.rollback.sync")
       .defaultValue(false)
       .withDocumentation("When set to true, the rollback method will delete the last failed task index. "
           + "The default value is false. Because deleting the index will add extra load on the RonDB cluster for each rollback");
 
-  /**
-   * @deprecated Use {@link #UPDATE_PARTITION_PATH_ENABLE} and its methods instead
-   */
-  @Deprecated
-  public static final String RONDB_INDEX_UPDATE_PARTITION_PATH = UPDATE_PARTITION_PATH_ENABLE.key();
-  /**
-   * @deprecated Use {@link #UPDATE_PARTITION_PATH_ENABLE} and its methods instead
-   */
-  @Deprecated
-  public static final Boolean DEFAULT_RONDB_INDEX_UPDATE_PARTITION_PATH = UPDATE_PARTITION_PATH_ENABLE.defaultValue();
-  /**
-   * @deprecated Use {@link #ROLLBACK_SYNC_ENABLE} and its methods instead
-   */
-  @Deprecated
-  public static final String RONDB_INDEX_ROLLBACK_SYNC = ROLLBACK_SYNC_ENABLE.key();
-  /**
-   * @deprecated Use {@link #ROLLBACK_SYNC_ENABLE} and its methods instead
-   */
-  @Deprecated
-  public static final Boolean DEFAULT_RONDB_INDEX_ROLLBACK_SYNC = ROLLBACK_SYNC_ENABLE.defaultValue();
+  public static final ConfigProperty<Properties> JPA = ConfigProperty
+      .key("hoodie.rondb.index.jpa")
+      .defaultValue(getJPAProperties())
+      .withDocumentation("JPA properties");
+
+  private static Properties getJPAProperties() {
+    Properties properties = new Properties();
+    properties.put("javax.persistence.jdbc.driver", "com.mysql.jdbc.Driver");
+    properties.put("javax.persistence.jdbc.url", "jdbc:mysql://localhost:3306/hudi?createDatabaseIfNotExist=true");
+    properties.put("javax.persistence.jdbc.user", "root");
+    properties.put("javax.persistence.jdbc.password", "");
+    properties.put("javax.persistence.schema-generation.database.action", "create");
+    return properties;
+  }
+
+  public static final ConfigProperty<Properties> JDBC = ConfigProperty
+      .key("hoodie.rondb.index.jdbc")
+      .defaultValue(getJDBCProperties())
+      .withDocumentation("JDBC properties");
+
+  private static Properties getJDBCProperties() {
+    Properties properties = new Properties();
+    properties.put("url", "jdbc:mysql://localhost:3306/hudi");
+    properties.put("createDatabaseIfNotExist", "true");
+    properties.put("user", "root");
+    properties.put("password", "");
+    return properties;
+  }
+
+  public static final ConfigProperty<Properties> CLUSTERJ = ConfigProperty
+      .key("hoodie.rondb.index.clusterj")
+      .defaultValue(getCLUSTERJProperties())
+      .withDocumentation("CLUSTERJ properties");
+
+  private static Properties getCLUSTERJProperties() {
+    Properties properties = new Properties();
+    properties.put("com.mysql.clusterj.connectstring", "10.0.2.15:1186");
+    properties.put("com.mysql.clusterj.database", "hudi");
+    return properties;
+  }
 
   private HoodieRonDBIndexConfig() {
     super();
@@ -101,6 +121,21 @@ public class HoodieRonDBIndexConfig extends HoodieConfig {
 
     public HoodieRonDBIndexConfig.Builder rondbIndexRollbackSync(boolean rollbackSync) {
       rondDBIndexConfig.setValue(ROLLBACK_SYNC_ENABLE, String.valueOf(rollbackSync));
+      return this;
+    }
+
+    public HoodieRonDBIndexConfig.Builder rondbIndexJPA(Properties properties) {
+      rondDBIndexConfig.setValue(JPA, String.valueOf(properties));
+      return this;
+    }
+
+    public HoodieRonDBIndexConfig.Builder rondbIndexJDBC(Properties properties) {
+      rondDBIndexConfig.setValue(JDBC, String.valueOf(properties));
+      return this;
+    }
+
+    public HoodieRonDBIndexConfig.Builder rondbIndexCLUSTERJ(Properties properties) {
+      rondDBIndexConfig.setValue(CLUSTERJ, String.valueOf(properties));
       return this;
     }
 
