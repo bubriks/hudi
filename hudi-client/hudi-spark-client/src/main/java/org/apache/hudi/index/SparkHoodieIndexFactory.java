@@ -55,7 +55,7 @@ public final class SparkHoodieIndexFactory {
     switch (config.getIndexType()) {
       case RONDB:
         return new SparkHoodieRonDBIndex<>(config);
-      case RONDB_ADVANCED:
+      case RONDB_CLUSTER:
         return new SparkHoodieRonDBClusterIndex<>(config);
       case HBASE:
         return new SparkHoodieHBaseIndex<>(config);
