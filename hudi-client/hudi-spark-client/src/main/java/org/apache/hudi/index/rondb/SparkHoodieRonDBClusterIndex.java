@@ -61,10 +61,10 @@ import java.util.List;
 /**
  * Hoodie Index implementation backed by RonDB.
  */
-public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload>
+public class SparkHoodieRonDBClusterIndex<T extends HoodieRecordPayload>
     extends HoodieIndex<T, JavaRDD<HoodieRecord<T>>, JavaRDD<HoodieKey>, JavaRDD<WriteStatus>> {
 
-  private static final Logger LOG = LogManager.getLogger(SparkHoodieRonDBAdvancedIndex.class);
+  private static final Logger LOG = LogManager.getLogger(SparkHoodieRonDBClusterIndex.class);
   private static SessionFactory entitySessionFactory;
   private static transient Thread shutdownThread;
 
@@ -75,9 +75,9 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload>
 
   private final String indexRecordKey = "idx_record_key";
 
-  private final String tableName = "hudi_record";
+  private final String tableName = "index_cluster_record";
 
-  public SparkHoodieRonDBAdvancedIndex(HoodieWriteConfig config) {
+  public SparkHoodieRonDBClusterIndex(HoodieWriteConfig config) {
     super(config);
     init();
   }
