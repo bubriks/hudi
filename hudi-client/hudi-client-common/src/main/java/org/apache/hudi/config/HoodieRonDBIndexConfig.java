@@ -49,6 +49,11 @@ public class HoodieRonDBIndexConfig extends HoodieConfig {
       .withDocumentation("When set to true, the rollback method will delete the last failed task index. "
           + "The default value is false. Because deleting the index will add extra load on the RonDB cluster for each rollback");
 
+  public static final ConfigProperty<String> JDBC_DRIVER = ConfigProperty
+          .key("hoodie.rondb.index.jdbc.driver")
+          .defaultValue("com.mysql.jdbc.Driver")
+          .withDocumentation("Sets driver to use when requiring JDBC connection");
+
   public static final ConfigProperty<Properties> JPA = ConfigProperty
       .key("hoodie.rondb.index.jpa")
       .defaultValue(getJPAProperties())
@@ -56,7 +61,6 @@ public class HoodieRonDBIndexConfig extends HoodieConfig {
 
   private static Properties getJPAProperties() {
     Properties properties = new Properties();
-    properties.put("javax.persistence.jdbc.driver", "com.mysql.jdbc.Driver");
     properties.put("javax.persistence.jdbc.url", "jdbc:mysql://localhost:3306/hudi?createDatabaseIfNotExist=true");
     properties.put("javax.persistence.jdbc.user", "root");
     properties.put("javax.persistence.jdbc.password", "");
@@ -121,6 +125,11 @@ public class HoodieRonDBIndexConfig extends HoodieConfig {
 
     public HoodieRonDBIndexConfig.Builder rondbIndexRollbackSync(boolean rollbackSync) {
       rondDBIndexConfig.setValue(ROLLBACK_SYNC_ENABLE, String.valueOf(rollbackSync));
+      return this;
+    }
+
+    public HoodieRonDBIndexConfig.Builder rondbIndexJDBCDriver(String driver) {
+      rondDBIndexConfig.setValue(JDBC_DRIVER, String.valueOf(driver));
       return this;
     }
 

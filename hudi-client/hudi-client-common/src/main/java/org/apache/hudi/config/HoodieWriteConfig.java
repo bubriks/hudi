@@ -1434,8 +1434,17 @@ public class HoodieWriteConfig extends HoodieConfig {
     return getBooleanOrDefault(HoodieRonDBIndexConfig.ROLLBACK_SYNC_ENABLE);
   }
 
+  public String getRonDBIndexJDBCDriver() {
+    return getStringOrDefault(HoodieRonDBIndexConfig.JDBC_DRIVER);
+  }
+
   public Properties getRonDBIndexJPA() {
-    return getPropertiesOrDefault(HoodieRonDBIndexConfig.JPA);
+    Properties properties = getPropertiesOrDefault(HoodieRonDBIndexConfig.JPA);
+    String driverNameProperty = "javax.persistence.jdbc.driver";
+    if (properties.getProperty(driverNameProperty) == null) {
+      properties.put(driverNameProperty, getRonDBIndexJDBCDriver());
+    }
+    return properties;
   }
 
   public Properties getRonDBIndexJDBC() {

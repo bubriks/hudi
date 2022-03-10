@@ -113,11 +113,14 @@ public class SparkHoodieRonDBAdvancedIndex<T extends HoodieRecordPayload>
 
   private Connection getRonDBConnection() {
     try {
-      DriverManager.registerDriver(new com.mysql.jdbc.Driver());
+      Class.forName(config.getRonDBIndexJDBCDriver());
       return DriverManager.getConnection(config.getRonDBIndexJDBC().getProperty("url"), config.getRonDBIndexJDBC());
     } catch (SQLException e) {
       throw new HoodieDependentSystemUnavailableException(HoodieDependentSystemUnavailableException.RONDB,
-          "url = " + config.getRonDBIndexJDBC().getProperty("url"), e);
+              "url: " + config.getRonDBIndexJDBC().getProperty("url"), e);
+    }  catch (ClassNotFoundException e) {
+      throw new HoodieDependentSystemUnavailableException(HoodieDependentSystemUnavailableException.RONDB,
+              "bad driver: " + config.getRonDBIndexJDBCDriver(), e);
     }
   }
 
