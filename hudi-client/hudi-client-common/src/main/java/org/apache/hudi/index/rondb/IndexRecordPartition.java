@@ -24,6 +24,7 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.Index;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.OneToMany;
@@ -32,7 +33,8 @@ import java.io.Serializable;
 import java.util.Collection;
 
 @Entity
-@Table(name = "index_record_partition")
+@Table(name = "index_record_partition",
+    indexes = {@Index(name = "path_index", columnList = "path", unique = true)})
 @NamedQueries({
     @NamedQuery(name = "RecordPartition.getByPath",
         query = "SELECT recordPartition FROM IndexRecordPartition recordPartition WHERE recordPartition.path = :path")})

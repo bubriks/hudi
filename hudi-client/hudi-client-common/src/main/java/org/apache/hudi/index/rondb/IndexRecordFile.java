@@ -24,6 +24,7 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.NamedQueries;
@@ -34,7 +35,8 @@ import java.io.Serializable;
 import java.util.Collection;
 
 @Entity
-@Table(name = "index_record_file")
+@Table(name = "index_record_file",
+    indexes = {@Index(name = "file_id_index", columnList = "file_id", unique = true)})
 @NamedQueries({
     @NamedQuery(name = "RecordFile.getByFileIdAndPartition",
         query = "SELECT file FROM IndexRecordFile file WHERE file.fileId = :fileId")})

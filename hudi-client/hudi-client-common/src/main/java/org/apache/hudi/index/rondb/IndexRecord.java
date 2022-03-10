@@ -21,6 +21,7 @@ package org.apache.hudi.index.rondb;
 import javax.persistence.CascadeType;
 import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
+import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.NamedQueries;
@@ -30,10 +31,13 @@ import java.io.Serializable;
 import java.text.ParseException;
 
 @Entity
-@Table(name = "index_record")
+@Table(name = "index_record",
+    indexes = {@Index(name = "record_key_index", columnList = "record_key")})
 @NamedQueries({
     @NamedQuery(name = "Record.findByKey",
-        query = "SELECT record FROM IndexRecord record WHERE record.recordKey.key = :key ORDER BY record.id.commitTimestamp DESC"),
+        query = "SELECT record FROM IndexRecord record WHERE record.id.key = :key ORDER BY record.id.commitTimestamp DESC"),
+    @NamedQuery(name = "Record.removeByKey",
+        query = "DELETE FROM IndexRecord record WHERE record.id.key = :key"),
     @NamedQuery(name = "Record.removeByTimestamp",
         query = "DELETE FROM IndexRecord record WHERE record.id.commitTimestamp > :timestamp")})
 public class IndexRecord implements Serializable {
@@ -41,29 +45,17 @@ public class IndexRecord implements Serializable {
   @EmbeddedId
   IndexRecordId id = new IndexRecordId();
 
-  @JoinColumn(name = "key_id", referencedColumnName = "id", nullable = false)
-  @ManyToOne(cascade = CascadeType.PERSIST)
-  private IndexRecordKey recordKey;
-
   @JoinColumn(name = "file_id", referencedColumnName = "id", nullable = false)
   @ManyToOne(cascade = CascadeType.PERSIST)
   private IndexRecordFile recordFile;
 
   public IndexRecord() {}
 
-  public IndexRecord(String commitTimestamp, IndexRecordKey recordKey, IndexRecordFile recordFile)
+  public IndexRecord(String recordKey, String commitTimestamp, IndexRecordFile recordFile)
       throws ParseException {
+    id.setKeyString(recordKey);
     id.setCommitTime(commitTimestamp);
-    setRecordKey(recordKey);
     setRecordFile(recordFile);
-  }
-
-  public IndexRecordKey getRecordKey() {
-    return recordKey;
-  }
-
-  public void setRecordKey(IndexRecordKey recordKey) {
-    this.recordKey = recordKey;
   }
 
   public IndexRecordFile getRecordFile() {

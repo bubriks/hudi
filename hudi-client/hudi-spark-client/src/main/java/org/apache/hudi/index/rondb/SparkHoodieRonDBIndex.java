@@ -145,7 +145,7 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload>
           continue;
         }
 
-        String keyFromResult = record.getRecordKey().getKeyString();
+        String keyFromResult = record.id.getKeyString();
         String commitTs = record.id.getCommitTimeString();
         String fileId = record.getRecordFile().getFileId();
         String partitionPath = record.getRecordFile().getRecordPartition().getPath();
@@ -229,17 +229,15 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload>
                   continue;
                 }
 
-                // Create and set values for new customer
-                IndexRecordKey key = getRecordKey(entityManager, currentRecord.getRecordKey());
+                // Create and set values for new index entry
                 IndexRecordPartition partition = getRecordPartition(entityManager, currentRecord.getPartitionPath());
                 IndexRecordFile file = getRecordFile(entityManager, loc.get().getFileId(), partition);
-
-                IndexRecord record = new IndexRecord(loc.get().getInstantTime(), key, file);
+                IndexRecord record = new IndexRecord(currentRecord.getRecordKey(), loc.get().getInstantTime(), file);
 
                 entityManager.persist(record);
               } else {
                 // Delete existing index for a deleted record
-                entityManager.createNamedQuery("RecordKey.removeByKey", IndexRecordKey.class)
+                entityManager.createNamedQuery("Record.removeByKey", IndexRecord.class)
                     .setParameter("key", currentRecord.getRecordKey().getBytes()).executeUpdate();
               }
             }
@@ -259,19 +257,6 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload>
       LOG.info("rondb puts task time for this task: " + (endPutsTime - startTimeForPutsTask));
       return writeStatusList.iterator();
     };
-  }
-
-  private IndexRecordKey getRecordKey(EntityManager entityManager, String value) {
-    IndexRecordKey recordKey;
-    try {
-      recordKey = entityManager.createNamedQuery("RecordKey.getByKey", IndexRecordKey.class)
-          .setParameter("key", value.getBytes())
-          .setMaxResults(1)
-          .getSingleResult();
-    } catch (NoResultException noResultException) {
-      recordKey = new IndexRecordKey(value);
-    }
-    return recordKey;
   }
 
   private IndexRecordPartition getRecordPartition(EntityManager entityManager, String partitionPath) {

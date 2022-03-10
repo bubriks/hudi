@@ -31,12 +31,20 @@ import java.util.Date;
 @Embeddable
 public class IndexRecordId implements Serializable {
 
-  @Column(name = "key_id", insertable = false, updatable = false)
-  private Long keyId;
+  @Column(name = "record_key", columnDefinition = "VARBINARY(255)", nullable = false)
+  private byte[] key;
 
-  @Column(name = "commit_ts")
+  @Column(name = "commit_ts", nullable = false)
   @Temporal(TemporalType.TIMESTAMP)
   private Date commitTimestamp;
+
+  public String getKeyString() {
+    return new String(key);
+  }
+
+  public void setKeyString(String key) {
+    this.key = key.getBytes();
+  }
 
   public Date getCommitTime() {
     return commitTimestamp;
