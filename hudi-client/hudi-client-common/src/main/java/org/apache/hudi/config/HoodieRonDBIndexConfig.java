@@ -54,6 +54,11 @@ public class HoodieRonDBIndexConfig extends HoodieConfig {
           .defaultValue("com.mysql.jdbc.Driver")
           .withDocumentation("Sets driver to use when requiring JDBC connection");
 
+  public static final ConfigProperty<String> JDBC_URL = ConfigProperty
+      .key("hoodie.rondb.index.jdbc.url")
+      .defaultValue("jdbc:mysql://localhost:3306/hudi")
+      .withDocumentation("JDBC url to use when connecting");
+
   public static final ConfigProperty<Properties> JPA = ConfigProperty
       .key("hoodie.rondb.index.jpa")
       .defaultValue(getJPAProperties())
@@ -75,7 +80,6 @@ public class HoodieRonDBIndexConfig extends HoodieConfig {
 
   private static Properties getJDBCProperties() {
     Properties properties = new Properties();
-    properties.put("url", "jdbc:mysql://localhost:3306/hudi");
     properties.put("createDatabaseIfNotExist", "true");
     properties.put("user", "root");
     properties.put("password", "");
@@ -130,6 +134,11 @@ public class HoodieRonDBIndexConfig extends HoodieConfig {
 
     public HoodieRonDBIndexConfig.Builder rondbIndexJDBCDriver(String driver) {
       rondDBIndexConfig.setValue(JDBC_DRIVER, String.valueOf(driver));
+      return this;
+    }
+
+    public HoodieRonDBIndexConfig.Builder rondbIndexJDBCURL(String url) {
+      rondDBIndexConfig.setValue(JDBC_URL, String.valueOf(url));
       return this;
     }
 

@@ -114,10 +114,10 @@ public class SparkHoodieRonDBClusterIndex<T extends HoodieRecordPayload>
   private Connection getRonDBConnection() {
     try {
       Class.forName(config.getRonDBIndexJDBCDriver());
-      return DriverManager.getConnection(config.getRonDBIndexJDBC().getProperty("url"), config.getRonDBIndexJDBC());
+      return DriverManager.getConnection(config.getRonDBIndexJDBCURL(), config.getRonDBIndexJDBC());
     } catch (SQLException e) {
       throw new HoodieDependentSystemUnavailableException(HoodieDependentSystemUnavailableException.RONDB,
-              "url: " + config.getRonDBIndexJDBC().getProperty("url"), e);
+              "url: " + config.getRonDBIndexJDBCURL(), e);
     }  catch (ClassNotFoundException e) {
       throw new HoodieDependentSystemUnavailableException(HoodieDependentSystemUnavailableException.RONDB,
               "bad driver: " + config.getRonDBIndexJDBCDriver(), e);

@@ -1438,6 +1438,10 @@ public class HoodieWriteConfig extends HoodieConfig {
     return getStringOrDefault(HoodieRonDBIndexConfig.JDBC_DRIVER);
   }
 
+  public String getRonDBIndexJDBCURL() {
+    return getStringOrDefault(HoodieRonDBIndexConfig.JDBC_URL);
+  }
+
   public Properties getRonDBIndexJPA() {
     Properties properties = getPropertiesOrDefault(HoodieRonDBIndexConfig.JPA);
     String driverNameProperty = "javax.persistence.jdbc.driver";
