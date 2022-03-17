@@ -304,7 +304,7 @@ public class SparkHoodieRonDBClusterIndex<T extends HoodieRecordPayload>
                 query.deletePersistentAll();
               }
             }
-            if(mutations.size() < config.getRonDBIndexBatchSize()) {
+            if (mutations.size() < config.getRonDBIndexBatchSize()) {
               continue;
             }
             session.makePersistentAll(mutations);
