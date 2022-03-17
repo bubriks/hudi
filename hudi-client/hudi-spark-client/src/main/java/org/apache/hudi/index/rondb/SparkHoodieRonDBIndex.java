@@ -208,6 +208,7 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload>
 
       final long startTimeForPutsTask = DateTime.now().getMillis();
       LOG.info("startTimeForPutsTask for this task: " + startTimeForPutsTask);
+      int mutations = 0;
 
       while (statusIterator.hasNext()) {
         WriteStatus writeStatus = statusIterator.next();
@@ -240,7 +241,15 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload>
                 entityManager.createNamedQuery("Record.removeByKey", IndexRecord.class)
                     .setParameter("key", currentRecord.getRecordKey().getBytes()).executeUpdate();
               }
+              mutations++;
             }
+            if (mutations < config.getRonDBIndexBatchSize()) {
+              continue;
+            }
+            // execute in batch (SQL commands to DB)
+            entityManager.flush();
+            entityManager.clear();
+            mutations = 0;
           }
           entityTransaction.commit();
         } catch (Exception e) {

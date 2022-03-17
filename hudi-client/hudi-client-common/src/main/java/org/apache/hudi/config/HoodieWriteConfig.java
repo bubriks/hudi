@@ -1430,6 +1430,10 @@ public class HoodieWriteConfig extends HoodieConfig {
     return getBooleanOrDefault(HoodieRonDBIndexConfig.UPDATE_PARTITION_PATH_ENABLE);
   }
 
+  public int getRonDBIndexBatchSize() {
+    return getInt(HoodieRonDBIndexConfig.BATCH_SIZE);
+  }
+
   public boolean getRonDBIndexRollbackSync() {
     return getBooleanOrDefault(HoodieRonDBIndexConfig.ROLLBACK_SYNC_ENABLE);
   }

@@ -36,7 +36,7 @@ import java.util.Properties;
 public class HoodieRonDBIndexConfig extends HoodieConfig {
 
   public static final ConfigProperty<Boolean> UPDATE_PARTITION_PATH_ENABLE = ConfigProperty
-      .key("hoodie.rondb.index.update.partition.path")
+      .key("hoodie.index.rondb.update.partition.path")
       .defaultValue(false)
       .withDocumentation("Only applies if index type is RONDB. "
           + "When an already existing record is upserted to a new partition compared to whats in storage, "
@@ -44,23 +44,29 @@ public class HoodieRonDBIndexConfig extends HoodieConfig {
           + "and will insert it as new record in new partition.");
 
   public static final ConfigProperty<Boolean> ROLLBACK_SYNC_ENABLE = ConfigProperty
-      .key("hoodie.rondb.index.rollback.sync")
+      .key("hoodie.index.rondb.rollback.sync")
       .defaultValue(false)
       .withDocumentation("When set to true, the rollback method will delete the last failed task index. "
           + "The default value is false. Because deleting the index will add extra load on the RonDB cluster for each rollback");
 
+  public static final ConfigProperty<Integer> BATCH_SIZE = ConfigProperty
+      .key("hoodie.index.rondb.batch.size")
+      .defaultValue(100)
+      .withDocumentation("Controls the batch size for performing operations against RonDB. "
+          + "Batching improves throughput, by saving round trips.");
+
   public static final ConfigProperty<String> JDBC_DRIVER = ConfigProperty
-          .key("hoodie.rondb.index.jdbc.driver")
+          .key("hoodie.index.rondb.jdbc.driver")
           .defaultValue("com.mysql.jdbc.Driver")
           .withDocumentation("Sets driver to use when requiring JDBC connection");
 
   public static final ConfigProperty<String> JDBC_URL = ConfigProperty
-      .key("hoodie.rondb.index.jdbc.url")
+      .key("hoodie.index.rondb.jdbc.url")
       .defaultValue("jdbc:mysql://localhost:3306/hudi")
       .withDocumentation("JDBC url to use when connecting");
 
   public static final ConfigProperty<Properties> JPA = ConfigProperty
-      .key("hoodie.rondb.index.jpa")
+      .key("hoodie.index.rondb.jpa")
       .defaultValue(getJPAProperties())
       .withDocumentation("JPA properties");
 
@@ -74,7 +80,7 @@ public class HoodieRonDBIndexConfig extends HoodieConfig {
   }
 
   public static final ConfigProperty<Properties> JDBC = ConfigProperty
-      .key("hoodie.rondb.index.jdbc")
+      .key("hoodie.index.rondb.jdbc")
       .defaultValue(getJDBCProperties())
       .withDocumentation("JDBC properties");
 
@@ -87,7 +93,7 @@ public class HoodieRonDBIndexConfig extends HoodieConfig {
   }
 
   public static final ConfigProperty<Properties> CLUSTERJ = ConfigProperty
-      .key("hoodie.rondb.index.clusterj")
+      .key("hoodie.index.rondb.clusterj")
       .defaultValue(getCLUSTERJProperties())
       .withDocumentation("CLUSTERJ properties");
 
@@ -129,6 +135,11 @@ public class HoodieRonDBIndexConfig extends HoodieConfig {
 
     public HoodieRonDBIndexConfig.Builder rondbIndexRollbackSync(boolean rollbackSync) {
       rondDBIndexConfig.setValue(ROLLBACK_SYNC_ENABLE, String.valueOf(rollbackSync));
+      return this;
+    }
+
+    public HoodieRonDBIndexConfig.Builder rondbIndexBatchSize(int batchSize) {
+      rondDBIndexConfig.setValue(BATCH_SIZE, String.valueOf(batchSize));
       return this;
     }
 

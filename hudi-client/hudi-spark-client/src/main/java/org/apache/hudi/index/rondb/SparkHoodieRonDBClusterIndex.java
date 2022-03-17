@@ -265,10 +265,10 @@ public class SparkHoodieRonDBClusterIndex<T extends HoodieRecordPayload>
 
       final long startTimeForPutsTask = DateTime.now().getMillis();
       LOG.info("startTimeForPutsTask for this task: " + startTimeForPutsTask);
+      List<HudiRecord> mutations = new ArrayList<>();
 
       while (statusIterator.hasNext()) {
         WriteStatus writeStatus = statusIterator.next();
-        List<HudiRecord> mutations = new ArrayList<>();
 
         // Start transaction
         Transaction transaction = session.currentTransaction();
@@ -304,6 +304,11 @@ public class SparkHoodieRonDBClusterIndex<T extends HoodieRecordPayload>
                 query.deletePersistentAll();
               }
             }
+            if(mutations.size() < config.getRonDBIndexBatchSize()) {
+              continue;
+            }
+            session.makePersistentAll(mutations);
+            mutations.clear();
           }
           session.makePersistentAll(mutations);
           transaction.commit();
