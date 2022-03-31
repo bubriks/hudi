@@ -231,8 +231,8 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload>
                 }
 
                 // Create and set values for new index entry
-                IndexRecordPartition partition = getRecordPartition(entityManager, currentRecord.getPartitionPath());
-                IndexRecordFile file = getRecordFile(entityManager, loc.get().getFileId(), partition);
+                IndexRecordFile file =
+                    getRecordFile(entityManager, loc.get().getFileId(), currentRecord.getPartitionPath());
                 IndexRecord record = new IndexRecord(currentRecord.getRecordKey(), loc.get().getInstantTime(), file);
 
                 entityManager.persist(record);
@@ -281,14 +281,15 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload>
     return recordPartition;
   }
 
-  private IndexRecordFile getRecordFile(EntityManager entityManager, String fileId, IndexRecordPartition partition) {
+  private IndexRecordFile getRecordFile(EntityManager entityManager, String fileId, String partitionPath) {
     IndexRecordFile recordFile;
     try {
-      recordFile = entityManager.createNamedQuery("RecordFile.getByFileIdAndPartition", IndexRecordFile.class)
+      recordFile = entityManager.createNamedQuery("RecordFile.getByFileId", IndexRecordFile.class)
           .setParameter("fileId", fileId)
           .setMaxResults(1)
           .getSingleResult();
     } catch (NoResultException noResultException) {
+      IndexRecordPartition partition = getRecordPartition(entityManager, partitionPath);
       recordFile = new IndexRecordFile(fileId, partition);
     }
     return recordFile;

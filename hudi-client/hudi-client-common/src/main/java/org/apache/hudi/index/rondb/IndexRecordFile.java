@@ -38,7 +38,7 @@ import java.util.Collection;
 @Table(name = "index_record_file",
     indexes = {@Index(name = "file_id_index", columnList = "file_id", unique = true)})
 @NamedQueries({
-    @NamedQuery(name = "RecordFile.getByFileIdAndPartition",
+    @NamedQuery(name = "RecordFile.getByFileId",
         query = "SELECT file FROM IndexRecordFile file WHERE file.fileId = :fileId")})
 public class IndexRecordFile implements Serializable {
 
