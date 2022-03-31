@@ -98,7 +98,7 @@ public class SparkHoodieRonDBClusterIndex<T extends HoodieRecordPayload>
           + "  %2$s VARBINARY(255) NOT NULL, \n"
           + "  %3$s BIGINT NOT NULL, \n"
           + "  %4$s VARCHAR(255) NOT NULL, \n"
-          + "  %5$s VARCHAR(255) NOT NULL, \n"
+          + "  %5$s VARCHAR(38) NOT NULL, \n"
           + "  PRIMARY KEY (%2$s, %3$s), \n"
           + "  INDEX %6$s (%2$s) \n"
           + ") ENGINE=NDBCLUSTER";
