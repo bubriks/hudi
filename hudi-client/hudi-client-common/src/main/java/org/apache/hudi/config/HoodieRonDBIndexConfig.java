@@ -56,9 +56,9 @@ public class HoodieRonDBIndexConfig extends HoodieConfig {
           + "Batching improves throughput, by saving round trips.");
 
   public static final ConfigProperty<String> JDBC_DRIVER = ConfigProperty
-          .key("hoodie.index.rondb.jdbc.driver")
-          .defaultValue("com.mysql.jdbc.Driver")
-          .withDocumentation("Sets driver to use when requiring JDBC connection");
+      .key("hoodie.index.rondb.jdbc.driver")
+      .defaultValue("com.mysql.cj.jdbc.Driver")
+      .withDocumentation("Sets driver to use when requiring JDBC connection");
 
   public static final ConfigProperty<String> JDBC_URL = ConfigProperty
       .key("hoodie.index.rondb.jdbc.url")

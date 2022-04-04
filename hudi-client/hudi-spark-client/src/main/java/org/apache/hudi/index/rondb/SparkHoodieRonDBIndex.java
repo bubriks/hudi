@@ -214,8 +214,7 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload>
         WriteStatus writeStatus = statusIterator.next();
 
         // Start transaction
-        EntityTransaction entityTransaction = entityManager.getTransaction();
-        entityTransaction.begin();
+        entityManager.getTransaction().begin();
 
         try {
           long numOfInserts = writeStatus.getStat().getNumInserts();
@@ -247,16 +246,17 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload>
               continue;
             }
             // execute in batch (SQL commands to DB)
-            entityManager.flush();
+            entityManager.getTransaction().commit();
             entityManager.clear();
+            entityManager.getTransaction().begin();
             mutations = 0;
           }
-          entityTransaction.commit();
+          entityManager.getTransaction().commit();
         } catch (Exception e) {
           Exception we = new Exception("Error updating index for " + writeStatus, e);
           LOG.error(we);
           writeStatus.setGlobalError(we);
-          entityTransaction.rollback();
+          entityManager.getTransaction().rollback();
         }
         writeStatusList.add(writeStatus);
       }
