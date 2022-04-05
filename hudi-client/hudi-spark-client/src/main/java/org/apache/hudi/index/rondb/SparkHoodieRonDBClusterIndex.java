@@ -79,12 +79,12 @@ public class SparkHoodieRonDBClusterIndex<T extends HoodieRecordPayload>
 
   public SparkHoodieRonDBClusterIndex(HoodieWriteConfig config) {
     super(config);
+    setUpEnvironment();
     init();
   }
 
   private void init() {
-    if (entitySessionFactory == null || entitySessionFactory.getSession().isClosed()) {
-      setUpEnvironment();
+    if (entitySessionFactory == null) {
       entitySessionFactory = ClusterJHelper.getSessionFactory(config.getRonDBIndexCLUSTERJ());
       addShutDownHook();
     }
@@ -135,6 +135,8 @@ public class SparkHoodieRonDBClusterIndex<T extends HoodieRecordPayload>
           entitySessionFactory.close();
         } catch (Exception e) {
           LOG.info("Problem closing RonDB connection");
+        } finally {
+          entitySessionFactory = null;
         }
       });
       Runtime.getRuntime().addShutdownHook(shutdownThread);

@@ -257,6 +257,7 @@ public class SparkHoodieRonDBIndex<T extends HoodieRecordPayload>
           LOG.error(we);
           writeStatus.setGlobalError(we);
           entityManager.getTransaction().rollback();
+          throw we;
         }
         writeStatusList.add(writeStatus);
       }
