@@ -272,10 +272,6 @@ public class SparkHoodieRonDBClusterIndex<T extends HoodieRecordPayload>
       while (statusIterator.hasNext()) {
         WriteStatus writeStatus = statusIterator.next();
 
-        // Start transaction
-        Transaction transaction = session.currentTransaction();
-        transaction.begin();
-
         try {
           long numOfInserts = writeStatus.getStat().getNumInserts();
           LOG.info("Num of inserts in this WriteStatus: " + numOfInserts);
@@ -309,16 +305,15 @@ public class SparkHoodieRonDBClusterIndex<T extends HoodieRecordPayload>
             if (mutations.size() < config.getRonDBIndexBatchSize()) {
               continue;
             }
-            session.makePersistentAll(mutations);
+            session.makePersistentAll(mutations); // all changes in single transaction
             mutations.clear();
           }
-          session.makePersistentAll(mutations);
-          transaction.commit();
+          session.makePersistentAll(mutations); // all changes in single transaction
         } catch (Exception e) {
           Exception we = new Exception("Error updating index for " + writeStatus, e);
           LOG.error(we);
           writeStatus.setGlobalError(we);
-          transaction.rollback();
+          throw we;
         }
         writeStatusList.add(writeStatus);
       }
