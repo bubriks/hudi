@@ -267,10 +267,13 @@ public class SparkHoodieRonDBClusterIndex<T extends HoodieRecordPayload>
 
       final long startTimeForPutsTask = DateTime.now().getMillis();
       LOG.info("startTimeForPutsTask for this task: " + startTimeForPutsTask);
-      List<HudiRecord> mutations = new ArrayList<>();
 
       while (statusIterator.hasNext()) {
         WriteStatus writeStatus = statusIterator.next();
+
+        Transaction transaction = session.currentTransaction();
+        transaction.begin();
+        int mutations = 0;
 
         try {
           long numOfInserts = writeStatus.getStat().getNumInserts();
@@ -291,7 +294,7 @@ public class SparkHoodieRonDBClusterIndex<T extends HoodieRecordPayload>
                 hudiRecord.setPartitionPath(currentRecord.getPartitionPath());
                 hudiRecord.setFileName(loc.get().getFileId());
 
-                mutations.add(hudiRecord);
+                session.makePersistent(hudiRecord);
               } else {
                 QueryBuilder builder = session.getQueryBuilder();
                 QueryDomainType<HudiRecord> domain = builder.createQueryDefinition(HudiRecord.class);
@@ -301,14 +304,15 @@ public class SparkHoodieRonDBClusterIndex<T extends HoodieRecordPayload>
                 query.setParameter("recordKey", currentRecord.getRecordKey().getBytes());
                 query.deletePersistentAll();
               }
+              mutations++;
             }
-            if (mutations.size() < config.getRonDBIndexBatchSize()) {
+            if (mutations < config.getRonDBIndexBatchSize()) {
               continue;
             }
-            session.makePersistentAll(mutations); // all changes in single transaction
-            mutations.clear();
+            transaction.commit();
+            transaction.begin();
           }
-          session.makePersistentAll(mutations); // all changes in single transaction
+          transaction.commit();
         } catch (Exception e) {
           Exception we = new Exception("Error updating index for " + writeStatus, e);
           LOG.error(we);
