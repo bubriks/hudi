@@ -65,20 +65,6 @@ public class HoodieRonDBIndexConfig extends HoodieConfig {
       .defaultValue("jdbc:mysql://localhost:3306/hudi")
       .withDocumentation("JDBC url to use when connecting");
 
-  public static final ConfigProperty<Properties> JPA = ConfigProperty
-      .key("hoodie.index.rondb.jpa")
-      .defaultValue(getJPAProperties())
-      .withDocumentation("JPA properties");
-
-  private static Properties getJPAProperties() {
-    Properties properties = new Properties();
-    properties.put("javax.persistence.jdbc.url", "jdbc:mysql://localhost:3306/hudi?createDatabaseIfNotExist=true");
-    properties.put("javax.persistence.jdbc.user", "root");
-    properties.put("javax.persistence.jdbc.password", "");
-    properties.put("javax.persistence.schema-generation.database.action", "create");
-    return properties;
-  }
-
   public static final ConfigProperty<Properties> JDBC = ConfigProperty
       .key("hoodie.index.rondb.jdbc")
       .defaultValue(getJDBCProperties())
@@ -150,11 +136,6 @@ public class HoodieRonDBIndexConfig extends HoodieConfig {
 
     public HoodieRonDBIndexConfig.Builder rondbIndexJDBCURL(String url) {
       rondDBIndexConfig.setValue(JDBC_URL, String.valueOf(url));
-      return this;
-    }
-
-    public HoodieRonDBIndexConfig.Builder rondbIndexJPA(Properties properties) {
-      rondDBIndexConfig.setValue(JPA, String.valueOf(properties));
       return this;
     }
 

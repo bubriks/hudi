@@ -46,7 +46,6 @@ import com.mysql.clusterj.ClusterJHelper;
 import com.mysql.clusterj.Query;
 import com.mysql.clusterj.Session;
 import com.mysql.clusterj.SessionFactory;
-import com.mysql.clusterj.Transaction;
 import com.mysql.clusterj.query.QueryBuilder;
 import com.mysql.clusterj.query.QueryDomainType;
 
@@ -54,9 +53,11 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Hoodie Index implementation backed by RonDB.
@@ -79,21 +80,20 @@ public class SparkHoodieRonDBClusterIndex<T extends HoodieRecordPayload>
 
   public SparkHoodieRonDBClusterIndex(HoodieWriteConfig config) {
     super(config);
-    setUpEnvironment();
     init();
   }
 
   private void init() {
     if (entitySessionFactory == null) {
+      setUpEnvironment();
       entitySessionFactory = ClusterJHelper.getSessionFactory(config.getRonDBIndexCLUSTERJ());
       addShutDownHook();
+      init();
     }
   }
 
   private void setUpEnvironment() {
-    try {
-      Statement stmt = getRonDBConnection().createStatement();
-
+    try (Statement stmt = getRonDBConnection().createStatement()) {
       String sqlTemplate = "CREATE TABLE IF NOT EXISTS %1$s (\n"
           + "  %2$s VARBINARY(255) NOT NULL, \n"
           + "  %3$s BIGINT NOT NULL, \n"
@@ -104,8 +104,7 @@ public class SparkHoodieRonDBClusterIndex<T extends HoodieRecordPayload>
           + ") ENGINE=NDBCLUSTER";
       String sql = String.format(sqlTemplate, tableName, recordKey, commitTimestamp, partition, fileName, indexRecordKey);
       stmt.execute(sql);
-
-      stmt.close();
+      LOG.debug("Table created");
     } catch (SQLException e) {
       throw new HoodieIndexException(e.getMessage());
     }
@@ -134,7 +133,7 @@ public class SparkHoodieRonDBClusterIndex<T extends HoodieRecordPayload>
         try {
           entitySessionFactory.close();
         } catch (Exception e) {
-          LOG.info("Problem closing RonDB connection");
+          LOG.error("Problem closing RonDB connection");
         } finally {
           entitySessionFactory = null;
         }
@@ -173,72 +172,93 @@ public class SparkHoodieRonDBClusterIndex<T extends HoodieRecordPayload>
 
     return (partitionNum, hoodieRecordIterator) -> {
 
-      boolean updatePartitionPath = config.getRonDBIndexUpdatePartitionPath();
+      final long startTimeForPutsTask = DateTime.now().getMillis();
 
-      Session session;
       synchronized (SparkHoodieRonDBIndex.class) {
         init();
-        session = entitySessionFactory.getSession();
       }
 
+      Map<String, HoodieRecord> recordMap = new HashMap<>();
+
       List<HoodieRecord<T>> taggedRecords = new ArrayList<>();
-      // Do the tagging.
-      while (hoodieRecordIterator.hasNext()) {
-        HoodieRecord currentRecord = hoodieRecordIterator.next();
+
+      try (Session session = entitySessionFactory.getSession()) {
 
         QueryBuilder builder = session.getQueryBuilder();
         QueryDomainType<HudiRecord> domain = builder.createQueryDefinition(HudiRecord.class);
-        domain.where(domain.get("recordKey").equal(domain.param("recordKey")));
+        domain.where(domain.get("recordKey").in(domain.param("recordKeys")));
 
-        Query<HudiRecord> query = session.createQuery(domain);
-        query.setParameter("recordKey", currentRecord.getRecordKey().getBytes());
-        query.setOrdering(Query.Ordering.DESCENDING, "recordKey", "commitTs");
-        query.setLimits(0, 1);
-        List<HudiRecord> results = query.getResultList();
+        // Do the tagging.
+        while (hoodieRecordIterator.hasNext()) {
+          HoodieRecord record = hoodieRecordIterator.next();
+          recordMap.put(record.getRecordKey(), record);
+          // iterator till we reach batch size
+          if (hoodieRecordIterator.hasNext() && recordMap.size() < config.getRonDBIndexBatchSize()) {
+            continue;
+          }
+          //for each batch (later do another for each to fill tagged records)
+          Query<HudiRecord> query = session.createQuery(domain);
+          query.setParameter("recordKeys",
+                  recordMap.keySet().stream().map(v -> v.getBytes()).toArray());
+          query.setOrdering(Query.Ordering.DESCENDING, "recordKey", "commitTs");
+          // can't do inner joins to return only the latest record, therefore if update of partition is enabled more
+          // records will be returned then needed
 
-        HudiRecord record;
-        if (!results.isEmpty()) {
-          record = results.get(0);
-        } else {
-          taggedRecords.add(currentRecord);
-          continue;
-        }
+          List<HudiRecord> results = query.getResultList();
 
-        String keyFromResult = new String(record.getRecordKey());
-        String commitTs = Long.toString(record.getCommitTs());
-        String fileId = record.getFileName();
-        String partitionPath = record.getPartitionPath();
+          for (HudiRecord resultRecord : results) {
+            String resultKey = new String(resultRecord.getRecordKey());
+            String resultCommitTimestamp = Long.toString(resultRecord.getCommitTs());
+            String resultFileName = resultRecord.getFileName();
+            String resultPartition = resultRecord.getPartitionPath();
 
-        if (!checkIfValidCommit(metaClient, commitTs)) {
-          // if commit is invalid, treat this as a new taggedRecord
-          taggedRecords.add(currentRecord);
-          continue;
-        }
+            HoodieRecord currentRecord = recordMap.remove(resultKey);
+            if (currentRecord == null) {
+              // the latest value already processed for this record, therefore ignore
+              continue;
+            }
 
-        // check whether to do partition change processing
-        if (updatePartitionPath && !partitionPath.equals(currentRecord.getPartitionPath())) {
-          // delete partition old data record
-          HoodieRecord emptyRecord = new HoodieRecord(new HoodieKey(currentRecord.getRecordKey(), partitionPath),
-              new EmptyHoodieRecordPayload());
-          emptyRecord.unseal();
-          emptyRecord.setCurrentLocation(new HoodieRecordLocation(commitTs, fileId));
-          emptyRecord.seal();
-          // insert partition new data record
-          currentRecord = new HoodieRecord(new HoodieKey(currentRecord.getRecordKey(), currentRecord.getPartitionPath()),
-              currentRecord.getData());
-          taggedRecords.add(emptyRecord);
-          taggedRecords.add(currentRecord);
-        } else {
-          currentRecord = new HoodieRecord(new HoodieKey(currentRecord.getRecordKey(), partitionPath),
-              currentRecord.getData());
-          currentRecord.unseal();
-          currentRecord.setCurrentLocation(new HoodieRecordLocation(commitTs, fileId));
-          currentRecord.seal();
-          taggedRecords.add(currentRecord);
-          // the key from Result and the key being processed should be same
-          assert (currentRecord.getRecordKey().contentEquals(keyFromResult));
+            if (!checkIfValidCommit(metaClient, resultCommitTimestamp)) {
+              // if commit is invalid, treat this as a new taggedRecord
+              taggedRecords.add(currentRecord);
+              continue;
+            }
+
+            // check whether to do partition change processing
+            if (config.getRonDBIndexUpdatePartitionPath() && !resultPartition.equals(currentRecord.getPartitionPath())) {
+              // delete partition old data record
+              HoodieRecord emptyRecord = new HoodieRecord(new HoodieKey(currentRecord.getRecordKey(), resultPartition),
+                      new EmptyHoodieRecordPayload());
+              emptyRecord.unseal();
+              emptyRecord.setCurrentLocation(new HoodieRecordLocation(resultCommitTimestamp, resultFileName));
+              emptyRecord.seal();
+              // insert partition new data record
+              currentRecord = new HoodieRecord(new HoodieKey(currentRecord.getRecordKey(), currentRecord.getPartitionPath()),
+                      currentRecord.getData());
+              taggedRecords.add(emptyRecord);
+              taggedRecords.add(currentRecord);
+            } else {
+              currentRecord = new HoodieRecord(new HoodieKey(currentRecord.getRecordKey(), resultPartition),
+                      currentRecord.getData());
+              currentRecord.unseal();
+              currentRecord.setCurrentLocation(new HoodieRecordLocation(resultCommitTimestamp, resultFileName));
+              currentRecord.seal();
+              taggedRecords.add(currentRecord);
+              // the key from Result and the key being processed should be same
+              assert (currentRecord.getRecordKey().contentEquals(resultKey));
+            }
+          }
+
+          for (HoodieRecord currentRecord : recordMap.values()) {
+            taggedRecords.add(currentRecord);
+          }
+
+          recordMap.clear();
         }
       }
+
+      final long endPutsTime = DateTime.now().getMillis();
+      LOG.debug("rondb puts task time for this task: " + (endPutsTime - startTimeForPutsTask));
       return taggedRecords.iterator();
     };
   }
@@ -259,71 +279,68 @@ public class SparkHoodieRonDBClusterIndex<T extends HoodieRecordPayload>
 
       List<WriteStatus> writeStatusList = new ArrayList<>();
 
-      Session session;
+      final long startTimeForPutsTask = DateTime.now().getMillis();
+      LOG.debug("startTimeForPutsTask for this task: " + startTimeForPutsTask);
+
       synchronized (SparkHoodieRonDBIndex.class) {
         init();
-        session = entitySessionFactory.getSession();
       }
 
-      final long startTimeForPutsTask = DateTime.now().getMillis();
-      LOG.info("startTimeForPutsTask for this task: " + startTimeForPutsTask);
+      try (Session session = entitySessionFactory.getSession()) {
 
-      while (statusIterator.hasNext()) {
-        WriteStatus writeStatus = statusIterator.next();
+        QueryBuilder builder = session.getQueryBuilder();
+        QueryDomainType<HudiRecord> domain = builder.createQueryDefinition(HudiRecord.class);
+        domain.where(domain.get("recordKey").equal(domain.param("recordKey")));
 
-        Transaction transaction = session.currentTransaction();
-        transaction.begin();
-        int mutations = 0;
+        List<HudiRecord> mutations = new ArrayList<>();
 
-        try {
-          long numOfInserts = writeStatus.getStat().getNumInserts();
-          LOG.info("Num of inserts in this WriteStatus: " + numOfInserts);
+        while (statusIterator.hasNext()) {
+          WriteStatus writeStatus = statusIterator.next();
 
-          for (HoodieRecord currentRecord : writeStatus.getWrittenRecords()) {
-            if (!writeStatus.isErrored(currentRecord.getKey())) {
-              Option<HoodieRecordLocation> loc = currentRecord.getNewLocation();
-              if (loc.isPresent()) {
-                if (currentRecord.getCurrentLocation() != null) {
-                  // This is an update, no need to update index
-                  continue;
+          try {
+            long numOfInserts = writeStatus.getStat().getNumInserts();
+            LOG.debug("Num of inserts in this WriteStatus: " + numOfInserts);
+
+            for (HoodieRecord currentRecord : writeStatus.getWrittenRecords()) {
+              if (!writeStatus.isErrored(currentRecord.getKey())) {
+                Option<HoodieRecordLocation> loc = currentRecord.getNewLocation();
+                if (loc.isPresent()) {
+                  if (currentRecord.getCurrentLocation() != null) {
+                    // This is an update, no need to update index
+                    continue;
+                  }
+
+                  HudiRecord hudiRecord = session.newInstance(HudiRecord.class);
+                  hudiRecord.setRecordKey(currentRecord.getRecordKey().getBytes());
+                  hudiRecord.setCommitTs(Long.parseLong(loc.get().getInstantTime()));
+                  hudiRecord.setPartitionPath(currentRecord.getPartitionPath());
+                  hudiRecord.setFileName(loc.get().getFileId());
+
+                  mutations.add(hudiRecord);
+                } else {
+                  Query<HudiRecord> query = session.createQuery(domain);
+                  query.setParameter("recordKey", currentRecord.getRecordKey().getBytes());
+                  query.deletePersistentAll();
                 }
-
-                HudiRecord hudiRecord = session.newInstance(HudiRecord.class);
-                hudiRecord.setRecordKey(currentRecord.getRecordKey().getBytes());
-                hudiRecord.setCommitTs(Long.parseLong(loc.get().getInstantTime()));
-                hudiRecord.setPartitionPath(currentRecord.getPartitionPath());
-                hudiRecord.setFileName(loc.get().getFileId());
-
-                session.makePersistent(hudiRecord);
-              } else {
-                QueryBuilder builder = session.getQueryBuilder();
-                QueryDomainType<HudiRecord> domain = builder.createQueryDefinition(HudiRecord.class);
-                domain.where(domain.get("recordKey").equal(domain.param("recordKey")));
-
-                Query<HudiRecord> query = session.createQuery(domain);
-                query.setParameter("recordKey", currentRecord.getRecordKey().getBytes());
-                query.deletePersistentAll();
               }
-              mutations++;
+              if (mutations.size() < config.getRonDBIndexBatchSize()) {
+                continue;
+              }
+              session.savePersistentAll(mutations);
+              mutations.clear();
             }
-            if (mutations < config.getRonDBIndexBatchSize()) {
-              continue;
-            }
-            transaction.commit();
-            transaction.begin();
+            session.savePersistentAll(mutations);
+          } catch (Exception e) {
+            Exception we = new Exception("Error updating index for " + writeStatus, e);
+            LOG.error(we);
+            writeStatus.setGlobalError(we);
           }
-          transaction.commit();
-        } catch (Exception e) {
-          Exception we = new Exception("Error updating index for " + writeStatus, e);
-          LOG.error(we);
-          writeStatus.setGlobalError(we);
-          throw we;
+          writeStatusList.add(writeStatus);
         }
-        writeStatusList.add(writeStatus);
       }
 
       final long endPutsTime = DateTime.now().getMillis();
-      LOG.info("rondb puts task time for this task: " + (endPutsTime - startTimeForPutsTask));
+      LOG.debug("rondb puts task time for this task: " + (endPutsTime - startTimeForPutsTask));
       return writeStatusList.iterator();
     };
   }
@@ -335,17 +352,11 @@ public class SparkHoodieRonDBClusterIndex<T extends HoodieRecordPayload>
       return true;
     }
 
-    Session session;
     synchronized (SparkHoodieRonDBIndex.class) {
       init();
-      session = entitySessionFactory.getSession();
     }
 
-    // Start transaction
-    Transaction transaction = session.currentTransaction();
-    transaction.begin();
-
-    try {
+    try (Session session = entitySessionFactory.getSession()) {
       QueryBuilder builder = session.getQueryBuilder();
       QueryDomainType<HudiRecord> domain = builder.createQueryDefinition(HudiRecord.class);
       domain.where(domain.get("commitTs").greaterThan(domain.param("commitTs")));
@@ -353,14 +364,12 @@ public class SparkHoodieRonDBClusterIndex<T extends HoodieRecordPayload>
       Query<HudiRecord> query = session.createQuery(domain);
       query.setParameter("commitTs", Long.parseLong(instantTime));
       query.deletePersistentAll();
-
-      transaction.commit();
     } catch (Exception e) {
-      transaction.rollback();
       LOG.error("rondb index roll back failed", e);
       return false;
     }
     return true;
+
   }
 
   /**
