@@ -178,7 +178,7 @@
     <dependency>
       <groupId>com.mysql.ndb</groupId>
       <artifactId>clusterj-api</artifactId>
-      <version>7.6.10</version>
+      <version>${clusterj-api.version}</version>
     </dependency>
 
   </dependencies>
