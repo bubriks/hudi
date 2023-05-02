@@ -19,13 +19,13 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
         <artifactId>hudi-flink-datasource</artifactId>
-        <groupId>org.apache.hudi</groupId>
-        <version>0.12.3</version>
+        <groupId>io.hops.hudi</groupId>
+        <version>0.12.3.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>hudi-flink1.14.x</artifactId>
-    <version>0.12.3</version>
+    <version>0.12.3.0</version>
     <packaging>jar</packaging>
 
     <properties>
@@ -49,12 +49,12 @@
 
         <!-- Hudi -->
         <dependency>
-            <groupId>org.apache.hudi</groupId>
+            <groupId>io.hops.hudi</groupId>
             <artifactId>hudi-common</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.apache.hadoop</groupId>
+            <groupId>io.hops</groupId>
             <artifactId>hadoop-common</artifactId>
             <version>${hadoop.version}</version>
             <scope>provided</scope>
@@ -115,9 +115,16 @@
             <type>test-jar</type>
         </dependency>
 
+        <dependency>
+            <groupId>io.hops</groupId>
+            <artifactId>hadoop-mapreduce-client-common</artifactId>
+            <version>${hadoop.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- Test dependencies -->
         <dependency>
-            <groupId>org.apache.hudi</groupId>
+            <groupId>io.hops.hudi</groupId>
             <artifactId>hudi-tests-common</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
