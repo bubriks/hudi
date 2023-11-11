@@ -28,6 +28,8 @@ public enum StorageSchemes {
   FILE("file", false),
   // Hadoop File System
   HDFS("hdfs", true),
+  // HopsFS
+  HOPSFS("hopsfs", true),
   // Baidu Advanced File System
   AFS("afs", true),
   // Mapr File System

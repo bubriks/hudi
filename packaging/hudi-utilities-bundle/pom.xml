@@ -207,6 +207,10 @@
                   <shadedPattern>io.hops.hudi.com.codahale.metrics.</shadedPattern>
                 </relocation>
                 <relocation>
+                  <pattern>io.prometheus.</pattern>
+                  <shadedPattern>io.hops.hudi.io.prometheus.</shadedPattern>
+                </relocation>
+                <relocation>
                   <pattern>org.apache.commons.codec.</pattern>
                   <shadedPattern>io.hops.hudi.org.apache.commons.codec.</shadedPattern>
                 </relocation>
@@ -229,6 +233,7 @@
                     <exclude>META-INF/services/javax.*</exclude>
                     <exclude>**/*.proto</exclude>
                     <exclude>hbase-webapps/**</exclude>
+                    <exclude>**/hive-site.xml</exclude>
                   </excludes>
                 </filter>
               </filters>
@@ -314,7 +319,7 @@
 
     <dependency>
       <groupId>${hive.groupid}</groupId>
-      <artifactId>hive-standalone-metastore</artifactId>
+      <artifactId>hive-metastore</artifactId>
       <version>${hive.version}</version>
       <scope>${utilities.bundle.hive.scope}</scope>
       <exclusions>

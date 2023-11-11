@@ -81,7 +81,7 @@
         </dependency>
         <dependency>
             <groupId>${hive.groupid}</groupId>
-            <artifactId>hive-standalone-metastore</artifactId>
+            <artifactId>hive-metastore</artifactId>
             <version>${hive.version}</version>
             <scope>test</scope>
         </dependency>

@@ -58,10 +58,10 @@
     <module>packaging/hudi-trino-bundle</module>
     <module>hudi-examples</module>
     <module>hudi-flink-datasource</module>
-    <module>hudi-kafka-connect</module>
+    <!-- <module>hudi-kafka-connect</module>
     <module>packaging/hudi-flink-bundle</module>
     <module>packaging/hudi-kafka-connect-bundle</module>
-    <module>hudi-tests-common</module>
+    <module>hudi-tests-common</module> -->
   </modules>
 
   <licenses>
@@ -112,7 +112,7 @@
     <joda.version>2.9.9</joda.version>
     <hadoop.version>3.2.0.9-RC0</hadoop.version>
     <hive.groupid>io.hops.hive</hive.groupid>
-    <hive.version>3.0.0.11</hive.version>
+    <hive.version>3.0.0.13.3</hive.version>
     <hive.parquet.version>1.11.0</hive.parquet.version>
     <hive.avro.version>1.8.2</hive.avro.version>
     <presto.version>0.273</presto.version>
@@ -121,7 +121,7 @@
     <metrics.version>4.1.1</metrics.version>
     <orc.version>1.6.0</orc.version>
     <airlift.version>0.16</airlift.version>
-    <prometheus.version>0.8.0</prometheus.version>
+    <prometheus.version>0.9.0</prometheus.version>
     <http.version>4.4.1</http.version>
     <spark.version>${spark2.version}</spark.version>
     <spark2.version>2.4.4</spark2.version>
@@ -1069,6 +1069,10 @@
         <scope>provided</scope>
         <exclusions>
           <exclusion>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>*</artifactId>
+          </exclusion>
+          <exclusion>
             <groupId>javax.servlet</groupId>
             <artifactId>servlet-api</artifactId>
           </exclusion>
@@ -1088,6 +1092,10 @@
         <version>${hadoop.version}</version>
         <scope>provided</scope>
         <exclusions>
+          <exclusion>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>*</artifactId>
+          </exclusion>
           <exclusion>
             <groupId>jdk.tools</groupId>
             <artifactId>jdk.tools</artifactId>
@@ -1113,6 +1121,10 @@
         <scope>provided</scope>
         <exclusions>
           <exclusion>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>*</artifactId>
+          </exclusion>
+          <exclusion>
             <groupId>log4j</groupId>
             <artifactId>log4j</artifactId>
           </exclusion>
@@ -1124,6 +1136,10 @@
         <version>${hadoop.version}</version>
         <scope>provided</scope>
         <exclusions>
+          <exclusion>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>*</artifactId>
+          </exclusion>
           <exclusion>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>
@@ -1140,6 +1156,10 @@
         <version>${hadoop.version}</version>
         <scope>provided</scope>
         <exclusions>
+          <exclusion>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>*</artifactId>
+          </exclusion>
           <exclusion>
             <groupId>javax.xml.bind</groupId>
             <artifactId>jaxb-api</artifactId>
@@ -1160,6 +1180,10 @@
         <version>${hadoop.version}</version>
         <scope>provided</scope>
         <exclusions>
+          <exclusion>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>*</artifactId>
+          </exclusion>
           <exclusion>
             <groupId>javax.xml.bind</groupId>
             <artifactId>jaxb-api</artifactId>
@@ -1182,6 +1206,10 @@
         <version>${hadoop.version}</version>
         <exclusions>
           <exclusion>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>*</artifactId>
+          </exclusion>
+          <exclusion>
             <groupId>log4j</groupId>
             <artifactId>log4j</artifactId>
           </exclusion>
@@ -1193,6 +1221,10 @@
         <classifier>tests</classifier>
         <version>${hadoop.version}</version>
         <exclusions>
+          <exclusion>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>*</artifactId>
+          </exclusion>
           <exclusion>
             <groupId>jdk.tools</groupId>
             <artifactId>jdk.tools</artifactId>
@@ -1224,7 +1256,7 @@
             <artifactId>*</artifactId>
           </exclusion>
           <exclusion>
-            <groupId>org.eclipse.jetty.aggregate</groupId>
+            <groupId>org.eclipse.jetty</groupId>
             <artifactId>*</artifactId>
           </exclusion>
           <exclusion>
@@ -1272,7 +1304,7 @@
             <artifactId>jaxb-api</artifactId>
           </exclusion>
           <exclusion>
-            <groupId>org.eclipse.jetty.aggregate</groupId>
+            <groupId>org.eclipse.jetty</groupId>
             <artifactId>*</artifactId>
           </exclusion>
           <exclusion>
@@ -1292,7 +1324,7 @@
             <artifactId>mail</artifactId>
           </exclusion>
           <exclusion>
-            <groupId>org.eclipse.jetty.aggregate</groupId>
+            <groupId>org.eclipse.jetty</groupId>
             <artifactId>*</artifactId>
           </exclusion>
           <exclusion>
@@ -1319,7 +1351,7 @@
       </dependency>
       <dependency>
         <groupId>${hive.groupid}</groupId>
-        <artifactId>hive-standalone-metastore</artifactId>
+        <artifactId>hive-metastore</artifactId>
         <version>${hive.version}</version>
         <scope>provided</scope>
         <exclusions>
@@ -1336,7 +1368,7 @@
             <artifactId>mail</artifactId>
           </exclusion>
           <exclusion>
-            <groupId>org.eclipse.jetty.aggregate</groupId>
+            <groupId>org.eclipse.jetty</groupId>
             <artifactId>*</artifactId>
           </exclusion>
           <exclusion>
@@ -1360,7 +1392,7 @@
             <artifactId>mail</artifactId>
           </exclusion>
           <exclusion>
-            <groupId>org.eclipse.jetty.aggregate</groupId>
+            <groupId>org.eclipse.jetty</groupId>
             <artifactId>*</artifactId>
           </exclusion>
           <exclusion>
@@ -1393,7 +1425,7 @@
             <artifactId>mail</artifactId>
           </exclusion>
           <exclusion>
-            <groupId>org.eclipse.jetty.aggregate</groupId>
+            <groupId>org.eclipse.jetty</groupId>
             <artifactId>*</artifactId>
           </exclusion>
           <exclusion>
@@ -1437,7 +1469,7 @@
             <groupId>com.google.guava</groupId>
           </exclusion>
           <exclusion>
-            <groupId>org.eclipse.jetty.aggregate</groupId>
+            <groupId>org.eclipse.jetty</groupId>
             <artifactId>*</artifactId>
           </exclusion>
           <exclusion>
